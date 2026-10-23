@@ -17,6 +17,7 @@ When you connect an HDMI soundbar (such as a Panasonic SoundSlayer), AV receiver
 - **Instant Redirection**: If any application is dragged, launched, or moved to a blocked display (e.g. via `Win + Shift + Arrow`), NOTM immediately bounces it back to your primary display.
 - **Window Size & Position Memory**: When an app is pulled back from a blocked display, its previous dimensions, coordinates, and maximized state on your primary monitor are automatically restored.
 - **Self-Protected**: NOTM protects its own window so it can never be trapped on a blocked display.
+- **Audio Keep-Alive**: Prevents HDMI soundbars and AV receivers from falling into power-saving sleep or clipping the start of sounds when playback resumes.
 
 ---
 
@@ -63,6 +64,11 @@ For anyone interested in the implementation details:
 - **Display Protection Guard**: Uses `Win32.MonitorFromWindow` to prevent designating an off-limits or invisible screen as primary.
 - **DWM Redraw Cleanliness**: Dispatches `Win32.RedrawWindow` with `RDW_FRAME | RDW_INVALIDATE | RDW_UPDATENOW` after repositioning to prevent DirectX / hardware composition tearing.
 
+### Audio Keep-Alive (WASAPI Engine)
+- **Problem Solved**: Digital soundbars (e.g. Panasonic SoundSlayer), AV receivers, and DACs often enter a power-saving sleep state when silent. When audio starts playing, the first 1-2 seconds get clipped or delayed while the HDMI audio clock re-syncs.
+- **Implementation**: Uses native Windows Audio Session API (`IAudioClient`) in shared mode to stream inaudible keep-alive samples (`Fluctuate` mode) with ~0% CPU. Alternates polarity (`0x34000001` / `0xB4000001` for float, `+1` / `-1` for 16-bit PCM) once per second to maintain zero DC bias while keeping the HDMI transmitter awake.
+- **Acknowledgements & Credit**: The audio keep-alive feature and `Fluctuate` stream implementation are directly inspired by and based on the work of **VEG** in [SoundKeeper](https://github.com/vrubleg/soundkeeper).
+
 ### Build & Utility Scripts
 | Script | Description |
 | :--- | :--- |
@@ -77,36 +83,42 @@ For anyone interested in the implementation details:
 ```
 NOTM/
 ├── Core/
+│   ├── Audio/
+│   │   ├── AudioKeepAliveService.cs  # WASAPI background keep-alive worker
+│   │   └── Wasapi.cs                 # Native WASAPI COM interop signatures
 │   ├── Native/
-│   │   └── Win32.cs               # Win32 P/Invoke APIs (SetWinEventHook, DWM, RedrawWindow)
+│   │   └── Win32.cs                  # Win32 P/Invoke APIs (SetWinEventHook, DWM, RedrawWindow)
 │   ├── Display/
-│   │   ├── DisplayInfo.cs         # Monitor geometry, DPI, and friendly name models
-│   │   └── DisplayService.cs      # Display enumeration via EnumDisplayMonitors & WMI
+│   │   ├── DisplayInfo.cs            # Monitor geometry, DPI, and friendly name models
+│   │   └── DisplayService.cs         # Display enumeration via EnumDisplayMonitors & WMI
 │   ├── Engine/
 │   │   └── WindowRelocationEngine.cs # WinEvent hook engine, window position cache & redirection
 │   ├── Config/
-│   │   ├── AppSettings.cs         # Settings schema
-│   │   └── ConfigService.cs       # JSON settings in %LocalAppData%\NOTM\settings.json
+│   │   ├── AppSettings.cs            # Settings schema
+│   │   └── ConfigService.cs          # JSON settings in %LocalAppData%\NOTM\settings.json
 │   ├── Startup/
-│   │   └── StartupService.cs      # Windows Run registry key manager
+│   │   └── StartupService.cs         # Windows Run registry key manager
 │   └── Tray/
-│       └── TrayIconService.cs     # System tray icon & context menu management
+│       └── TrayIconService.cs        # System tray icon & context menu management
 ├── UI/
-│   ├── MainWindow.xaml / .cs      # Main dashboard replicating Windows Display Settings
-│   ├── MainWindowViewModel.cs     # MVVM ViewModel coordinating engine, state, and UI
-│   ├── MonitorVisualMap.xaml / .cs# Scaled physical monitor layout canvas
-│   └── IdentifyOverlayWindow.xaml # Click-through screen identification overlays
+│   ├── MainWindow.xaml / .cs         # Main dashboard replicating Windows Display Settings
+│   ├── MainWindowViewModel.cs        # MVVM ViewModel coordinating engine, state, and UI
+│   ├── MonitorVisualMap.xaml / .cs   # Scaled physical monitor layout canvas
+│   └── IdentifyOverlayWindow.xaml    # Click-through screen identification overlays
 ├── Assets/
-│   ├── app.ico                    # Multi-resolution application icon
-│   └── generate_icon.ps1          # Icon generator script
-├── NOTM.sln                       # Visual Studio Solution
-├── NOTM.csproj                    # Project configuration (.NET 8 Windows)
-├── install.cmd / install.ps1      # User-level installer
-├── uninstall.cmd / uninstall.ps1  # Complete uninstaller
-├── run.cmd                        # Debug runner
-├── build.cmd                      # Release builder
-└── publish.cmd / publish.ps1      # Single-file publisher
+│   ├── app.ico                       # Multi-resolution application icon
+│   └── generate_icon.ps1             # Icon generator script
+├── NOTM.sln                          # Visual Studio Solution
+├── NOTM.csproj                       # Project configuration (.NET 8 Windows)
+├── install.cmd / install.ps1         # User-level installer
+├── uninstall.cmd / uninstall.ps1     # Complete uninstaller
+├── run.cmd                           # Debug runner
+├── build.cmd                         # Release builder
+└── publish.cmd / publish.ps1         # Single-file publisher
 ```
+
+## Acknowledgements
+- [SoundKeeper by VEG (vrubleg)](https://github.com/vrubleg/soundkeeper) — for the WASAPI audio keep-alive concept and the `Fluctuate` stream design that keeps digital audio devices awake without audible sound.
 
 ## License
 MIT License.

@@ -254,6 +254,16 @@
                               VerticalAlignment="Center"
                               Cursor="Hand"/>
 
+                    <!-- Keep Audio Awake (Inspired by SoundKeeper) -->
+                    <CheckBox Content="Keep Audio Awake"
+                              IsChecked="{Binding KeepAudioAwake}"
+                              Foreground="#A1A1AA"
+                              FontSize="12"
+                              Margin="0,0,16,0"
+                              VerticalAlignment="Center"
+                              Cursor="Hand"
+                              ToolTip="Prevents HDMI soundbars and AV receivers from entering standby or clipping the start of audio (Inspired by SoundKeeper by vrubleg)"/>
+
                     <!-- Sweep Button -->
                     <Button Content="⚡ Sweep"
                             Style="{StaticResource ActionButtonStyle}"

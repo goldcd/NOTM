@@ -2,6 +2,7 @@ using System;
 using System.Linq;
 using System.Threading;
 using System.Windows;
+using NOTM.Core.Audio;
 using NOTM.Core.Config;
 using NOTM.Core.Engine;
 using NOTM.Core.Tray;
@@ -16,6 +17,7 @@ public partial class App : Application
 
     private WindowRelocationEngine? _engine;
     private TrayIconService? _trayService;
+    private AudioKeepAliveService? _audioService;
     private MainWindowViewModel? _viewModel;
     private MainWindow? _mainWindow;
 
@@ -39,8 +41,9 @@ public partial class App : Application
         // Initialize Core Services
         _engine = new WindowRelocationEngine();
         _trayService = new TrayIconService();
+        _audioService = new AudioKeepAliveService(startEnabled: true);
 
-        _viewModel = new MainWindowViewModel(_engine, _trayService);
+        _viewModel = new MainWindowViewModel(_engine, _trayService, _audioService);
         _mainWindow = new MainWindow(_viewModel);
 
         _trayService.OnOpenRequested += ShowMainWindow;
@@ -80,6 +83,7 @@ public partial class App : Application
     private void ShutdownApplication()
     {
         _mainWindow?.RequestExplicitExit();
+        _audioService?.Dispose();
         _engine?.Dispose();
         _trayService?.Dispose();
 

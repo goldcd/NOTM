@@ -4,6 +4,7 @@ using System.ComponentModel;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Windows.Media;
+using NOTM.Core.Audio;
 using NOTM.Core.Config;
 using NOTM.Core.Display;
 using NOTM.Core.Engine;
@@ -199,11 +200,37 @@ public class MainWindowViewModel : INotifyPropertyChanged
         }
     }
 
-    public MainWindowViewModel(WindowRelocationEngine engine, TrayIconService trayService)
+    public bool KeepAudioAwake
+    {
+        get => _settings.KeepAudioAwake;
+        set
+        {
+            if (_settings.KeepAudioAwake != value)
+            {
+                _settings.KeepAudioAwake = value;
+                if (_audioService != null)
+                {
+                    _audioService.IsEnabled = value;
+                }
+                SaveSettings();
+                OnPropertyChanged();
+            }
+        }
+    }
+
+    private readonly AudioKeepAliveService? _audioService;
+
+    public MainWindowViewModel(WindowRelocationEngine engine, TrayIconService trayService, AudioKeepAliveService? audioService = null)
     {
         _engine = engine;
         _trayService = trayService;
+        _audioService = audioService;
         _settings = ConfigService.Load();
+
+        if (_audioService != null)
+        {
+            _audioService.IsEnabled = _settings.KeepAudioAwake;
+        }
 
         _isGuardActive = _settings.IsGuardEnabled;
         UpdateGuardStatusVisuals();
