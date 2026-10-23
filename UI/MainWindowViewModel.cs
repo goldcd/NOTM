@@ -10,7 +10,10 @@ using NOTM.Core.Display;
 using NOTM.Core.Engine;
 using NOTM.Core.Startup;
 using NOTM.Core.Tray;
+using NOTM.Core.Update;
 using NOTM.Models;
+using System.Threading.Tasks;
+using System.Windows;
 
 namespace NOTM.UI;
 
@@ -157,6 +160,92 @@ public class MainWindowViewModel : INotifyPropertyChanged
         }
     }
 
+    public string AppVersion
+    {
+        get
+        {
+            var v = typeof(MainWindowViewModel).Assembly.GetName().Version;
+            return v != null ? $"v{v.Major}.{v.Minor}.{Math.Max(v.Build, 0)}" : "v1.0.0";
+        }
+    }
+
+    private readonly UpdateService _updateService = new();
+    private UpdateInfo? _availableUpdate;
+    private bool _isDownloadingUpdate;
+    private string _updateButtonText = "Update";
+
+    public bool IsUpdateAvailable => _availableUpdate != null;
+    public string? AvailableUpdateVersion => _availableUpdate?.Version;
+
+    public bool IsDownloadingUpdate
+    {
+        get => _isDownloadingUpdate;
+        set
+        {
+            if (_isDownloadingUpdate != value)
+            {
+                _isDownloadingUpdate = value;
+                OnPropertyChanged();
+            }
+        }
+    }
+
+    public string UpdateButtonText
+    {
+        get => _updateButtonText;
+        set
+        {
+            if (_updateButtonText != value)
+            {
+                _updateButtonText = value;
+                OnPropertyChanged();
+            }
+        }
+    }
+
+    public async Task CheckForUpdatesAsync()
+    {
+        try
+        {
+            var update = await _updateService.CheckForUpdateAsync();
+            if (update != null)
+            {
+                _availableUpdate = update;
+                UpdateButtonText = $"Update to {update.Version}";
+                OnPropertyChanged(nameof(IsUpdateAvailable));
+                OnPropertyChanged(nameof(AvailableUpdateVersion));
+            }
+        }
+        catch
+        {
+            // Silently ignore check failures
+        }
+    }
+
+    public async Task ApplyUpdateAsync()
+    {
+        if (_availableUpdate == null || IsDownloadingUpdate)
+            return;
+
+        try
+        {
+            IsDownloadingUpdate = true;
+            UpdateButtonText = "Downloading...";
+            var progress = new Progress<double>(p =>
+            {
+                UpdateButtonText = $"Downloading... {p:P0}";
+            });
+
+            await _updateService.ApplyUpdateAsync(_availableUpdate, progress);
+        }
+        catch (Exception ex)
+        {
+            IsDownloadingUpdate = false;
+            UpdateButtonText = "Update failed (retry)";
+            MessageBox.Show($"Could not apply update:\n{ex.Message}", "Update Failed", MessageBoxButton.OK, MessageBoxImage.Warning);
+        }
+    }
+
     public bool StartWithWindows
     {
         get => _settings.StartWithWindows;
@@ -241,6 +330,12 @@ public class MainWindowViewModel : INotifyPropertyChanged
         _trayService.OnResetPrimaryRequested += () => ResetToWindowsPrimary();
 
         LoadDisplays();
+
+        _ = Task.Run(async () =>
+        {
+            await Task.Delay(2000);
+            await CheckForUpdatesAsync();
+        });
     }
 
     public void LoadDisplays()

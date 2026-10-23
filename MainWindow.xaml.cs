@@ -119,4 +119,9 @@ public partial class MainWindow : Window
     {
         ViewModel.ClearLog();
     }
+
+    private async void OnApplyUpdateClicked(object sender, RoutedEventArgs e)
+    {
+        await ViewModel.ApplyUpdateAsync();
+    }
 }

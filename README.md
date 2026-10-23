@@ -124,6 +124,8 @@ NOTM/
 │   │   └── ConfigService.cs          # JSON settings in %LocalAppData%\NOTM\settings.json
 │   ├── Startup/
 │   │   └── StartupService.cs         # Windows Run registry key manager
+│   ├── Update/
+│   │   └── UpdateService.cs          # GitHub Releases auto-update checker & file swapper
 │   └── Tray/
 │       └── TrayIconService.cs        # System tray icon & context menu management
 ├── UI/

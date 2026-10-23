@@ -147,6 +147,8 @@
             <RowDefinition Height="*"/>
             <!-- 2: Selected Display Configuration Card -->
             <RowDefinition Height="Auto"/>
+            <!-- 3: Subtle Footer Bar (Version & Update Notice) -->
+            <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
 
         <!-- ================= 0: CLEAN HEADER BAR ================= -->
@@ -499,5 +501,47 @@
                 </Border>
             </Grid>
         </Border>
+
+        <!-- ================= 3: SUBTLE FOOTER BAR ================= -->
+        <Grid Grid.Row="3" Margin="2,8,2,0">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="Auto"/>
+            </Grid.ColumnDefinitions>
+
+            <!-- Left: Update notification & one-click action (only visible if an update is available) -->
+            <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center"
+                        Visibility="{Binding IsUpdateAvailable, Converter={x:Static ui:BooleanToVisibilityConverter.Instance}}">
+                <Border Background="#1E293B" BorderBrush="#3B82F6" BorderThickness="1" CornerRadius="4" Padding="6,2" Margin="0,0,8,0">
+                    <TextBlock Text="UPDATE" FontSize="9.5" FontWeight="Bold" Foreground="#60A5FA"/>
+                </Border>
+                <TextBlock Text="New version available: " FontSize="11" Foreground="#94A3B8" VerticalAlignment="Center"/>
+                <TextBlock Text="{Binding AvailableUpdateVersion}" FontSize="11" FontWeight="SemiBold" Foreground="#F1F5F9" VerticalAlignment="Center" Margin="0,0,10,0"/>
+
+                <Button Content="{Binding UpdateButtonText}"
+                        Click="OnApplyUpdateClicked"
+                        IsEnabled="{Binding IsDownloadingUpdate, Converter={x:Static ui:InverseBooleanConverter.Instance}}"
+                        Background="#2563EB" Foreground="White" BorderThickness="0"
+                        Padding="10,3" FontSize="11" FontWeight="SemiBold" Cursor="Hand"
+                        VerticalAlignment="Center">
+                    <Button.Template>
+                        <ControlTemplate TargetType="Button">
+                            <Border Background="{TemplateBinding Background}" CornerRadius="4" Padding="{TemplateBinding Padding}">
+                                <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                            </Border>
+                        </ControlTemplate>
+                    </Button.Template>
+                </Button>
+            </StackPanel>
+
+            <!-- Right: Small subtle version number -->
+            <TextBlock Grid.Column="1"
+                       Text="{Binding AppVersion}"
+                       FontSize="11"
+                       Foreground="#64748B"
+                       VerticalAlignment="Center"
+                       HorizontalAlignment="Right"
+                       ToolTip="Current running version"/>
+        </Grid>
     </Grid>
 </Window>
