@@ -45,6 +45,11 @@ public class MainWindowViewModel : INotifyPropertyChanged
         }
     }
 
+    public void ToggleGuard()
+    {
+        IsGuardActive = !IsGuardActive;
+    }
+
     public int RelocatedCount
     {
         get => _relocatedCount;
@@ -70,6 +75,59 @@ public class MainWindowViewModel : INotifyPropertyChanged
                 OnPropertyChanged(nameof(IsSelectedExcluded));
             }
         }
+    }
+
+    private IntPtr _currentAppHMonitor = IntPtr.Zero;
+    public IntPtr CurrentAppHMonitor
+    {
+        get => _currentAppHMonitor;
+        set
+        {
+            if (_currentAppHMonitor != value)
+            {
+                _currentAppHMonitor = value;
+                OnPropertyChanged();
+                OnPropertyChanged(nameof(CanSetSelectedAsPrimary));
+                OnPropertyChanged(nameof(PrimaryButtonToolTip));
+            }
+        }
+    }
+
+    public bool CanSetSelectedAsPrimary
+    {
+        get
+        {
+            if (SelectedDisplay == null) return false;
+            if (SelectedDisplay.IsTargetPrimary) return false;
+            if (SelectedDisplay.IsExcluded) return false;
+
+            // Feedback 3: Only the display the app is currently on can be set as primary!
+            if (CurrentAppHMonitor != IntPtr.Zero && SelectedDisplay.HMonitor != IntPtr.Zero)
+            {
+                return SelectedDisplay.HMonitor == CurrentAppHMonitor;
+            }
+            return true;
+        }
+    }
+
+    public string PrimaryButtonToolTip
+    {
+        get
+        {
+            if (SelectedDisplay == null) return string.Empty;
+            if (SelectedDisplay.IsTargetPrimary) return "This display is already designated as the primary target.";
+            if (SelectedDisplay.IsExcluded) return "A blocked display cannot be designated as primary.";
+            if (CurrentAppHMonitor != IntPtr.Zero && SelectedDisplay.HMonitor != IntPtr.Zero && SelectedDisplay.HMonitor != CurrentAppHMonitor)
+            {
+                return "Safety Protection: Only the display currently showing this NOTM window can be set as primary. Move this window to that display first.";
+            }
+            return "Set this display as the primary target.";
+        }
+    }
+
+    public void UpdateCurrentAppMonitor(IntPtr hMonitor)
+    {
+        CurrentAppHMonitor = hMonitor;
     }
 
     public bool IsSelectedPrimary => SelectedDisplay?.IsTargetPrimary ?? false;

@@ -27,6 +27,24 @@ public partial class MainWindow : Window
         var handle = new WindowInteropHelper(this).Handle;
         var source = HwndSource.FromHwnd(handle);
         source?.AddHook(WndProc);
+
+        UpdateCurrentAppMonitor();
+    }
+
+    protected override void OnLocationChanged(EventArgs e)
+    {
+        base.OnLocationChanged(e);
+        UpdateCurrentAppMonitor();
+    }
+
+    private void UpdateCurrentAppMonitor()
+    {
+        var handle = new WindowInteropHelper(this).Handle;
+        if (handle != IntPtr.Zero)
+        {
+            IntPtr hMon = Win32.MonitorFromWindow(handle, Win32.MONITOR_DEFAULTTONEAREST);
+            ViewModel.UpdateCurrentAppMonitor(hMon);
+        }
     }
 
     private IntPtr WndProc(IntPtr hwnd, int msg, IntPtr wParam, IntPtr lParam, ref bool handled)
@@ -60,6 +78,11 @@ public partial class MainWindow : Window
         {
             base.OnClosing(e);
         }
+    }
+
+    private void OnToggleGuardClicked(object sender, RoutedEventArgs e)
+    {
+        ViewModel.ToggleGuard();
     }
 
     private void OnIdentifyAllClicked(object sender, RoutedEventArgs e)

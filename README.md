@@ -32,8 +32,8 @@ If you disable or disconnect the monitor in Windows Display Settings, **audio st
 - **Identify Displays Button**: Positioned directly under the visual canvas (just like Windows Settings) to flash large, translucent, click-through numbered cards (`[ 1 ]`, `[ 2 ]`) on your screens.
 
 ### 2. Custom System Tray Icon
-- **When Active**: Displays a monitor icon with the **red forbidden / no-entry symbol (⛔ red circle with a horizontal bar)**.
-- **When Toggled Off**: The forbidden overlay is removed, leaving a clean neutral monitor icon.
+- **When Active**: Displays a monitor glyph with the **red forbidden / prohibition symbol (🚫 red circle with a diagonal slash)**.
+- **When Toggled Off**: The forbidden overlay is removed, leaving a clean neutral monitor glyph.
 - **Clicking the Tray Icon**: Left-clicking or right-clicking immediately displays two primary actions:
   1. **Open NOTM** (launches the dashboard)
   2. **Guard Active (Toggle On/Off)** (switches protection on or off instantly)

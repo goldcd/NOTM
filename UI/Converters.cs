@@ -43,6 +43,23 @@ public class BlockButtonStyleConverter : IValueConverter
         throw new NotImplementedException();
 }
 
+public class PrimaryButtonTextConverter : IValueConverter
+{
+    public static readonly PrimaryButtonTextConverter Instance = new();
+
+    public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
+    {
+        if (value is bool isTargetPrimary && isTargetPrimary)
+        {
+            return "Current Primary";
+        }
+        return "Set as Primary";
+    }
+
+    public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture) =>
+        throw new NotImplementedException();
+}
+
 public class ZeroCountToVisibilityConverter : IValueConverter
 {
     public static readonly ZeroCountToVisibilityConverter Instance = new();

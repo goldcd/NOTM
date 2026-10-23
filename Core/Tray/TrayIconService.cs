@@ -102,51 +102,52 @@ public class TrayIconService : IDisposable
 
     private static Icon CreateMonitorIcon(bool withForbiddenOverlay)
     {
-        // 32x32 crisp system tray icon
+        // 32x32 crisp vector glyph
         using var bmp = new Bitmap(32, 32);
         using var g = Graphics.FromImage(bmp);
         g.SmoothingMode = SmoothingMode.AntiAlias;
         g.InterpolationMode = InterpolationMode.HighQualityBicubic;
         g.PixelOffsetMode = PixelOffsetMode.HighQuality;
 
-        // Monitor Stand
-        using var standBrush = new SolidBrush(System.Drawing.Color.FromArgb(160, 168, 180));
-        g.FillRectangle(standBrush, 14, 21, 4, 4);
-        g.FillRectangle(standBrush, 9, 25, 14, 2);
+        // Monitor Glyph: Stand
+        using var standPen = new Pen(System.Drawing.Color.FromArgb(220, 225, 235), 2.5f);
+        g.DrawLine(standPen, 16, 21, 16, 25);
+        g.DrawLine(standPen, 10, 26, 22, 26);
 
-        // Monitor Outer Bezel
-        using var bezelBrush = new SolidBrush(System.Drawing.Color.FromArgb(38, 42, 50));
-        using var bezelPen = new Pen(System.Drawing.Color.FromArgb(200, 205, 215), 1.5f);
-        g.FillRectangle(bezelBrush, 3, 3, 26, 17);
-        g.DrawRectangle(bezelPen, 3, 3, 26, 17);
-
-        // Inner Screen
-        using var screenBrush = new SolidBrush(System.Drawing.Color.FromArgb(18, 22, 28));
-        g.FillRectangle(screenBrush, 5, 5, 22, 13);
+        // Monitor Glyph: Screen Bezel & Fill
+        using var screenBg = new SolidBrush(System.Drawing.Color.FromArgb(200, 24, 26, 32));
+        using var bezelPen = new Pen(System.Drawing.Color.FromArgb(225, 230, 240), 2f);
+        
+        // Rounded screen rectangle
+        var screenRect = new Rectangle(2, 2, 27, 18);
+        g.FillRectangle(screenBg, screenRect);
+        g.DrawRectangle(bezelPen, screenRect);
 
         if (withForbiddenOverlay)
         {
-            // Requirement 1: Red circle with DIAGONAL line (Prohibition sign 🚫)
-            int circleX = 11;
-            int circleY = 4;
-            int size = 16;
+            // Requirement 1: Forbidden overlay (clean vector with transparency)
+            // Centered overlay with diameter 17
+            float cx = 13.5f;
+            float cy = 2.5f;
+            float diam = 16f;
 
-            // Semi-translucent white backplate for high contrast on any taskbar color
-            using var plateBrush = new SolidBrush(System.Drawing.Color.FromArgb(235, 255, 255, 255));
-            g.FillEllipse(plateBrush, circleX, circleY, size, size);
+            // Subtle dark contrast halo so the red ring pops cleanly on white or dark taskbars
+            using var haloPen = new Pen(System.Drawing.Color.FromArgb(160, 0, 0, 0), 3.5f);
+            g.DrawEllipse(haloPen, cx, cy, diam, diam);
+            g.DrawLine(haloPen, cx + 3.5f, cy + 3.5f, cx + diam - 3.5f, cy + diam - 3.5f);
 
-            // Red circle ring
-            using var redPen = new Pen(System.Drawing.Color.FromArgb(225, 29, 72), 2.5f);
-            g.DrawEllipse(redPen, circleX + 1, circleY + 1, size - 2, size - 2);
+            // Red ring (vivid crimson vector)
+            using var redPen = new Pen(System.Drawing.Color.FromArgb(239, 68, 68), 2.2f);
+            g.DrawEllipse(redPen, cx, cy, diam, diam);
 
-            // Red diagonal line from top-left (135 deg) to bottom-right (315 deg)
-            g.DrawLine(redPen, circleX + 4, circleY + 4, circleX + size - 4, circleY + size - 4);
+            // Red diagonal line (top-left 135 deg to bottom-right 315 deg)
+            g.DrawLine(redPen, cx + 3.5f, cy + 3.5f, cx + diam - 3.5f, cy + diam - 3.5f);
         }
         else
         {
-            // When toggled off, forbidden overlay is completely removed; subtle paused indicator
-            using var pausedBrush = new SolidBrush(System.Drawing.Color.FromArgb(90, 105, 125));
-            g.FillRectangle(pausedBrush, 9, 9, 14, 5);
+            // When toggled off: subtle green or neutral status tick on screen
+            using var powerBrush = new SolidBrush(System.Drawing.Color.FromArgb(148, 163, 184));
+            g.FillEllipse(powerBrush, 14, 16, 3, 3);
         }
 
         IntPtr hIcon = bmp.GetHicon();

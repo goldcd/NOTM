@@ -4,16 +4,17 @@
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
              mc:Ignorable="d" 
-             d:DesignHeight="200" d:DesignWidth="700"
+             d:DesignHeight="230" d:DesignWidth="750"
+             MinHeight="220"
              UseLayoutRounding="True"
              SnapsToDevicePixels="True"
              TextOptions.TextFormattingMode="Display"
              TextOptions.TextRenderingMode="ClearType">
-    <Border Background="#19191D"
-            BorderBrush="#2A2A30"
+    <Border Background="#18181A"
+            BorderBrush="#2A2A2E"
             BorderThickness="1"
-            CornerRadius="12"
-            Padding="20"
+            CornerRadius="10"
+            Padding="20,16"
             ClipToBounds="True">
         <Grid>
             <Canvas x:Name="MapCanvas"
