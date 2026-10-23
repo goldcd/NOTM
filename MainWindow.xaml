@@ -5,7 +5,8 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:ui="clr-namespace:NOTM.UI"
         mc:Ignorable="d"
-        Title="NOTM - Not On This Monitor"
+        Title="NOTM - Not on That Monitor"
+        Icon="Assets/app.ico"
         Height="680" Width="920"
         MinHeight="580" MinWidth="820"
         WindowStartupLocation="CenterScreen"
@@ -156,14 +157,40 @@
                     <ColumnDefinition Width="*"/>
                 </Grid.ColumnDefinitions>
 
-                <!-- Left: App Title and Clickable Guard Toggle Button -->
+                <!-- Left: App Icon, Brand Title and Clickable Guard Toggle Button -->
                 <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
-                    <TextBlock Text="NOTM"
-                               FontSize="20"
-                               FontWeight="Bold"
-                               Foreground="White"
-                               VerticalAlignment="Center"
-                               Margin="0,0,14,0"/>
+                    <!-- Option 4 Vector App Icon -->
+                    <Grid Width="28" Height="28" Margin="0,0,10,0" VerticalAlignment="Center">
+                        <!-- Monitor Frame -->
+                        <Border Width="24" Height="16" Margin="0,0,0,6"
+                                Background="#181A20"
+                                BorderBrush="#F1F5F9"
+                                BorderThickness="1.8"
+                                CornerRadius="2.5"
+                                HorizontalAlignment="Center"
+                                VerticalAlignment="Top"/>
+                        <!-- Stand Neck -->
+                        <Rectangle Width="2" Height="5" Fill="#F1F5F9" HorizontalAlignment="Center" VerticalAlignment="Bottom" Margin="0,0,0,2"/>
+                        <!-- Stand Foot -->
+                        <Rectangle Width="12" Height="1.8" RadiusX="0.9" RadiusY="0.9" Fill="#F1F5F9" HorizontalAlignment="Center" VerticalAlignment="Bottom"/>
+                        <!-- Diagonal Ban Slash (Option 4) with contrast halo -->
+                        <Line X1="1" Y1="25" X2="27" Y2="3" Stroke="#0F1117" StrokeThickness="4.8" StrokeStartLineCap="Round" StrokeEndLineCap="Round"/>
+                        <Line X1="1" Y1="25" X2="27" Y2="3" Stroke="#EF4444" StrokeThickness="2.8" StrokeStartLineCap="Round" StrokeEndLineCap="Round"/>
+                    </Grid>
+
+                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,16,0">
+                        <TextBlock Text="NOTM"
+                                   FontSize="19"
+                                   FontWeight="Bold"
+                                   Foreground="White"
+                                   VerticalAlignment="Center"/>
+                        <TextBlock Text="— Not on That Monitor"
+                                   FontSize="13"
+                                   FontWeight="SemiBold"
+                                   Foreground="#94A3B8"
+                                   VerticalAlignment="Center"
+                                   Margin="6,1,0,0"/>
+                    </StackPanel>
 
                     <!-- Requirement 4: Guard Status Graphic acts directly as the toggle button -->
                     <Button Click="OnToggleGuardClicked"

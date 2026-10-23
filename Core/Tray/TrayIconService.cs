@@ -58,7 +58,7 @@ public class TrayIconService : IDisposable
 
         _notifyIcon = new NotifyIcon
         {
-            Text = "NOTM - Monitor Guard",
+            Text = "NOTM - Not on That Monitor (Active)",
             Visible = true,
             ContextMenuStrip = _contextMenu,
             Icon = CreateMonitorIcon(true)
@@ -81,7 +81,7 @@ public class TrayIconService : IDisposable
         _guardToggleItem.Checked = isEnabled;
         _guardToggleItem.Text = isEnabled ? "Guard: Active (Click to Pause)" : "Guard: Paused (Click to Enable)";
         UpdateIconState(isEnabled);
-        _notifyIcon.Text = isEnabled ? "NOTM - Monitor Guard (Active)" : "NOTM - Monitor Guard (Paused)";
+        _notifyIcon.Text = isEnabled ? "NOTM - Not on That Monitor (Active)" : "NOTM - Not on That Monitor (Paused)";
     }
 
     private void UpdateIconState(bool active)
@@ -102,52 +102,51 @@ public class TrayIconService : IDisposable
 
     private static Icon CreateMonitorIcon(bool withForbiddenOverlay)
     {
-        // 32x32 crisp vector glyph
+        // 32x32 high-visibility vector glyph
         using var bmp = new Bitmap(32, 32);
         using var g = Graphics.FromImage(bmp);
         g.SmoothingMode = SmoothingMode.AntiAlias;
         g.InterpolationMode = InterpolationMode.HighQualityBicubic;
         g.PixelOffsetMode = PixelOffsetMode.HighQuality;
 
-        // Monitor Glyph: Stand
-        using var standPen = new Pen(System.Drawing.Color.FromArgb(220, 225, 235), 2.5f);
-        g.DrawLine(standPen, 16, 21, 16, 25);
-        g.DrawLine(standPen, 10, 26, 22, 26);
-
-        // Monitor Glyph: Screen Bezel & Fill
-        using var screenBg = new SolidBrush(System.Drawing.Color.FromArgb(200, 24, 26, 32));
-        using var bezelPen = new Pen(System.Drawing.Color.FromArgb(225, 230, 240), 2f);
+        // 1. Minimalist Monitor Glyph
+        using var monitorPen = new Pen(System.Drawing.Color.FromArgb(241, 245, 249), 2f)
+        {
+            StartCap = LineCap.Round,
+            EndCap = LineCap.Round
+        };
         
-        // Rounded screen rectangle
-        var screenRect = new Rectangle(2, 2, 27, 18);
-        g.FillRectangle(screenBg, screenRect);
-        g.DrawRectangle(bezelPen, screenRect);
+        using var screenBrush = new SolidBrush(System.Drawing.Color.FromArgb(220, 24, 26, 32));
+        g.FillRectangle(screenBrush, 4, 5, 24, 15);
+        g.DrawRectangle(monitorPen, 3, 4, 25, 16);
+
+        // Stand neck & foot
+        g.DrawLine(monitorPen, 16, 20, 16, 25);
+        g.DrawLine(monitorPen, 9, 25, 23, 25);
 
         if (withForbiddenOverlay)
         {
-            // Requirement 1: Forbidden overlay (clean vector with transparency)
-            // Centered overlay with diameter 17
-            float cx = 13.5f;
-            float cy = 2.5f;
-            float diam = 16f;
+            // Option 4: Bold Diagonal Ban Stripe across monitor (bottom-left to top-right)
+            using var haloPen = new Pen(System.Drawing.Color.FromArgb(230, 15, 17, 23), 5.5f)
+            {
+                StartCap = LineCap.Round,
+                EndCap = LineCap.Round
+            };
+            g.DrawLine(haloPen, 3f, 25f, 29f, 3f);
 
-            // Subtle dark contrast halo so the red ring pops cleanly on white or dark taskbars
-            using var haloPen = new Pen(System.Drawing.Color.FromArgb(160, 0, 0, 0), 3.5f);
-            g.DrawEllipse(haloPen, cx, cy, diam, diam);
-            g.DrawLine(haloPen, cx + 3.5f, cy + 3.5f, cx + diam - 3.5f, cy + diam - 3.5f);
-
-            // Red ring (vivid crimson vector)
-            using var redPen = new Pen(System.Drawing.Color.FromArgb(239, 68, 68), 2.2f);
-            g.DrawEllipse(redPen, cx, cy, diam, diam);
-
-            // Red diagonal line (top-left 135 deg to bottom-right 315 deg)
-            g.DrawLine(redPen, cx + 3.5f, cy + 3.5f, cx + diam - 3.5f, cy + diam - 3.5f);
+            // Vivid crimson red stripe
+            using var redPen = new Pen(System.Drawing.Color.FromArgb(239, 68, 68), 3.5f)
+            {
+                StartCap = LineCap.Round,
+                EndCap = LineCap.Round
+            };
+            g.DrawLine(redPen, 3f, 25f, 29f, 3f);
         }
         else
         {
-            // When toggled off: subtle green or neutral status tick on screen
-            using var powerBrush = new SolidBrush(System.Drawing.Color.FromArgb(148, 163, 184));
-            g.FillEllipse(powerBrush, 14, 16, 3, 3);
+            // When guard paused: clean monitor with subtle power dot on bezel
+            using var dotBrush = new SolidBrush(System.Drawing.Color.FromArgb(148, 163, 184));
+            g.FillEllipse(dotBrush, 15, 17, 2, 2);
         }
 
         IntPtr hIcon = bmp.GetHicon();

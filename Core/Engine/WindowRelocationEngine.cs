@@ -17,6 +17,10 @@ public class WindowRelocationEngine : IDisposable
     private readonly uint _currentProcessId;
     private readonly ConcurrentDictionary<IntPtr, DateTime> _recentlyRelocated = new();
 
+    // Cache of last known safe position & size of windows on allowed monitors (Requirement 3)
+    private readonly ConcurrentDictionary<IntPtr, Win32.RECT> _lastKnownSafeBounds = new();
+    private readonly ConcurrentDictionary<IntPtr, bool> _lastKnownMaximized = new();
+
     private readonly List<IntPtr> _hookHandles = new();
     private Win32.WinEventDelegate? _winEventDelegate;
     private System.Timers.Timer? _sweepTimer;
@@ -49,7 +53,7 @@ public class WindowRelocationEngine : IDisposable
                 _winEventDelegate,
                 0,
                 0,
-                Win32.WINEVENT_OUTOFCONTEXT | Win32.WINEVENT_SKIPOWNPROCESS);
+                Win32.WINEVENT_OUTOFCONTEXT);
 
             // 2. Hook window location change (captures keyboard moves like Shift+Win+Arrow instantly)
             IntPtr hookLocation = Win32.SetWinEventHook(
@@ -59,7 +63,7 @@ public class WindowRelocationEngine : IDisposable
                 _winEventDelegate,
                 0,
                 0,
-                Win32.WINEVENT_OUTOFCONTEXT | Win32.WINEVENT_SKIPOWNPROCESS);
+                Win32.WINEVENT_OUTOFCONTEXT);
 
             // 3. Hook window foreground change
             IntPtr hookForeground = Win32.SetWinEventHook(
@@ -69,7 +73,7 @@ public class WindowRelocationEngine : IDisposable
                 _winEventDelegate,
                 0,
                 0,
-                Win32.WINEVENT_OUTOFCONTEXT | Win32.WINEVENT_SKIPOWNPROCESS);
+                Win32.WINEVENT_OUTOFCONTEXT);
 
             // 4. Hook new window shown
             IntPtr hookShow = Win32.SetWinEventHook(
@@ -79,7 +83,7 @@ public class WindowRelocationEngine : IDisposable
                 _winEventDelegate,
                 0,
                 0,
-                Win32.WINEVENT_OUTOFCONTEXT | Win32.WINEVENT_SKIPOWNPROCESS);
+                Win32.WINEVENT_OUTOFCONTEXT);
 
             if (hookMoveEnd != IntPtr.Zero) _hookHandles.Add(hookMoveEnd);
             if (hookLocation != IntPtr.Zero) _hookHandles.Add(hookLocation);
@@ -177,10 +181,10 @@ public class WindowRelocationEngine : IDisposable
     {
         if (!_isGuardEnabled || hWnd == IntPtr.Zero) return false;
 
-        // Debounce: don't process the same window repeatedly within 400ms
+        // Debounce: don't process the same window repeatedly within 350ms
         if (_recentlyRelocated.TryGetValue(hWnd, out var lastTime))
         {
-            if ((DateTime.UtcNow - lastTime).TotalMilliseconds < 400)
+            if ((DateTime.UtcNow - lastTime).TotalMilliseconds < 350)
             {
                 return false;
             }
@@ -192,11 +196,19 @@ public class WindowRelocationEngine : IDisposable
             return false;
         }
 
-        // Ignore our own process
+        // Check process ID
         Win32.GetWindowThreadProcessId(hWnd, out uint processId);
-        if (processId == _currentProcessId || processId == 0)
+        if (processId == 0) return false;
+
+        // Requirement 2: Protect NOTM itself! Only skip identify overlay windows, NOT the NOTM main window
+        if (processId == _currentProcessId)
         {
-            return false;
+            var cNameBuilder = new StringBuilder(256);
+            Win32.GetClassName(hWnd, cNameBuilder, 256);
+            if (cNameBuilder.ToString().Contains("IdentifyOverlay", StringComparison.OrdinalIgnoreCase))
+            {
+                return false;
+            }
         }
 
         // Ignore desktop and shell windows
@@ -256,7 +268,7 @@ public class WindowRelocationEngine : IDisposable
 
         if (targetPrimary == null) return false;
 
-        // Excluded monitors can NEVER include the target primary monitor! (Prevents same-monitor relocation)
+        // Excluded monitors can NEVER include the target primary monitor!
         var excludedMonitors = activeMonitors
             .Where(m => m.IsExcluded && m.HMonitor != targetPrimary.HMonitor && m.DeviceName != targetPrimary.DeviceName)
             .ToList();
@@ -295,9 +307,24 @@ public class WindowRelocationEngine : IDisposable
             }
         }
 
-        // Sanity Check: Must be on an excluded monitor, and NEVER from targetPrimary to targetPrimary!
-        if (sourceExcludedMonitor == null ||
-            sourceExcludedMonitor.HMonitor == targetPrimary.HMonitor ||
+        // Requirement 3: If window is on a safe/allowed monitor, RECORD its position and size!
+        if (sourceExcludedMonitor == null)
+        {
+            bool isCurrentZoomed = Win32.IsZoomed(hWnd);
+            if (!isCurrentZoomed && rect.Width >= 100 && rect.Height >= 100)
+            {
+                _lastKnownSafeBounds[hWnd] = rect;
+                _lastKnownMaximized[hWnd] = false;
+            }
+            else if (isCurrentZoomed)
+            {
+                _lastKnownMaximized[hWnd] = true;
+            }
+            return false;
+        }
+
+        // Sanity Check: Never relocate to the same monitor!
+        if (sourceExcludedMonitor.HMonitor == targetPrimary.HMonitor ||
             sourceExcludedMonitor.DeviceName == targetPrimary.DeviceName)
         {
             return false;
@@ -319,18 +346,30 @@ public class WindowRelocationEngine : IDisposable
 
         bool isZoomed = Win32.IsZoomed(hWnd);
 
-        // Calculate target dimensions ensuring it is visible and fits inside target working area
-        int targetWidth = Math.Max(320, Math.Min(rect.Width, targetPrimary.WorkWidth));
-        int targetHeight = Math.Max(240, Math.Min(rect.Height, targetPrimary.WorkHeight));
+        // Requirement 3: Restore previous position and dimensions if available!
+        bool hadSavedBounds = _lastKnownSafeBounds.TryGetValue(hWnd, out var savedRect);
+        bool wasMaximized = (_lastKnownMaximized.TryGetValue(hWnd, out var wasMax) && wasMax) || isZoomed;
 
-        // Center on target primary working area and clamp to bounds
-        int targetX = targetPrimary.WorkLeft + Math.Max(0, (targetPrimary.WorkWidth - targetWidth) / 2);
-        int targetY = targetPrimary.WorkTop + Math.Max(0, (targetPrimary.WorkHeight - targetHeight) / 2);
+        int targetWidth, targetHeight, targetX, targetY;
 
-        targetX = Math.Max(targetPrimary.WorkLeft, Math.Min(targetX, targetPrimary.WorkRight - targetWidth));
-        targetY = Math.Max(targetPrimary.WorkTop, Math.Min(targetY, targetPrimary.WorkBottom - targetHeight));
+        if (hadSavedBounds && savedRect.Width >= 100 && savedRect.Height >= 100)
+        {
+            // Restore exact previous width, height, and coordinates on the primary monitor!
+            targetWidth = Math.Min(savedRect.Width, targetPrimary.WorkWidth);
+            targetHeight = Math.Min(savedRect.Height, targetPrimary.WorkHeight);
+            targetX = Math.Max(targetPrimary.WorkLeft, Math.Min(savedRect.Left, targetPrimary.WorkRight - targetWidth));
+            targetY = Math.Max(targetPrimary.WorkTop, Math.Min(savedRect.Top, targetPrimary.WorkBottom - targetHeight));
+        }
+        else
+        {
+            // Fallback for new window launching directly onto excluded monitor:
+            targetWidth = Math.Max(320, Math.Min(rect.Width, targetPrimary.WorkWidth));
+            targetHeight = Math.Max(240, Math.Min(rect.Height, targetPrimary.WorkHeight));
+            targetX = targetPrimary.WorkLeft + Math.Max(0, (targetPrimary.WorkWidth - targetWidth) / 2);
+            targetY = targetPrimary.WorkTop + Math.Max(0, (targetPrimary.WorkHeight - targetHeight) / 2);
+        }
 
-        if (isZoomed)
+        if (wasMaximized)
         {
             // Restore, move into target monitor, then re-maximize
             Win32.ShowWindow(hWnd, Win32.SW_RESTORE);

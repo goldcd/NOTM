@@ -51,7 +51,7 @@ $wscript = New-Object -ComObject WScript.Shell
 $shortcut = $wscript.CreateShortcut($shortcutPath)
 $shortcut.TargetPath = Join-Path $installDir "NOTM.exe"
 $shortcut.WorkingDirectory = $installDir
-$shortcut.Description = "NOTM - Monitor Guard"
+$shortcut.Description = "NOTM - Not on That Monitor"
 $shortcut.IconLocation = Join-Path $installDir "NOTM.exe,0"
 $shortcut.Save()
 
@@ -62,7 +62,7 @@ if (-not (Test-Path $uninstallRegKey)) {
     New-Item -Path $uninstallRegKey -Force | Out-Null
 }
 
-Set-ItemProperty -Path $uninstallRegKey -Name "DisplayName" -Value "NOTM - Monitor Guard"
+Set-ItemProperty -Path $uninstallRegKey -Name "DisplayName" -Value "NOTM - Not on That Monitor"
 Set-ItemProperty -Path $uninstallRegKey -Name "DisplayVersion" -Value "1.0.0"
 Set-ItemProperty -Path $uninstallRegKey -Name "Publisher" -Value "goldcd"
 Set-ItemProperty -Path $uninstallRegKey -Name "DisplayIcon" -Value (Join-Path $installDir "NOTM.exe")

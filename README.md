@@ -1,4 +1,4 @@
-# NOTM (Not On This Monitor) 🛡️
+# NOTM (Not on That Monitor) 🛡️
 
 [![.NET Version](https://img.shields.io/badge/.NET-8.0%20LTS-512BD4?logo=dotnet)](https://dotnet.microsoft.com/)
 [![Platform](https://img.shields.io/badge/Platform-Windows%2010%20%2F%2011-0078D6?logo=windows)](https://microsoft.com/windows)
@@ -31,12 +31,13 @@ If you disable or disconnect the monitor in Windows Display Settings, **audio st
   - **Block Display (Not in Use)**: Forbids application windows from staying on this screen.
 - **Identify Displays Button**: Positioned directly under the visual canvas (just like Windows Settings) to flash large, translucent, click-through numbered cards (`[ 1 ]`, `[ 2 ]`) on your screens.
 
-### 2. Custom System Tray Icon
-- **When Active**: Displays a monitor glyph with the **red forbidden / prohibition symbol (🚫 red circle with a diagonal slash)**.
-- **When Toggled Off**: The forbidden overlay is removed, leaving a clean neutral monitor glyph.
-- **Clicking the Tray Icon**: Left-clicking or right-clicking immediately displays two primary actions:
+### 2. Custom System Tray & Application Icon
+- **When Active**: Displays a crisp minimalist monitor glyph with a **bold vivid red diagonal ban stripe** cutting across the display.
+- **When Toggled Off**: The diagonal ban is removed, leaving a clean minimalist monitor glyph.
+- **Consistent Branding**: The exact same icon is used across the system tray, the Windows taskbar, the window title bar, and the in-app header.
+- **Clicking the Tray Icon**: Left-clicking or right-clicking displays two primary actions:
   1. **Open NOTM** (launches the dashboard)
-  2. **Guard Active (Toggle On/Off)** (switches protection on or off instantly)
+  2. **Guard: Active / Paused (Toggle On/Off)** (switches protection on or off instantly)
 - Zero GDI memory leaks: Automatically releases native `HICON` handles.
 
 ### 3. Automatic Hardware Change Detection (`WM_DISPLAYCHANGE`)

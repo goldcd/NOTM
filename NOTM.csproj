@@ -12,9 +12,9 @@
     <!-- Assembly Metadata -->
     <AssemblyName>NOTM</AssemblyName>
     <RootNamespace>NOTM</RootNamespace>
-    <Product>NOTM</Product>
-    <Title>NOTM - Monitor Guard</Title>
-    <Description>Windows Monitor Usage Restrictor &amp; Off-Limits Display Guard</Description>
+    <Product>NOTM - Not on That Monitor</Product>
+    <Title>NOTM - Not on That Monitor</Title>
+    <Description>NOTM - Not on That Monitor</Description>
     <Company>goldcd</Company>
     <Version>1.0.0</Version>
     <FileVersion>1.0.0.0</FileVersion>
@@ -26,6 +26,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <Resource Include="Assets\app.ico" />
     <Content Include="Assets\app.ico">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>

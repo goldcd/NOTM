@@ -1,4 +1,4 @@
-; Inno Setup Script for NOTM (Not On This Monitor)
+; Inno Setup Script for NOTM (Not on That Monitor)
 ; Builds a standard Windows Setup Wizard (e.g. NOTM-Setup.exe)
 
 #define MyAppName "NOTM"
