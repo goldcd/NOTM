@@ -108,7 +108,7 @@ public class DisplayInfo : INotifyPropertyChanged
 
         if (intersectRight > intersectLeft && intersectBottom > intersectTop)
         {
-            return (intersectRight - intersectLeft) * (intersectBottom - intersectTop);
+            return (double)(intersectRight - intersectLeft) * (double)(intersectBottom - intersectTop);
         }
         return 0;
     }

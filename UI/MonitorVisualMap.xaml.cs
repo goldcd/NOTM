@@ -7,7 +7,7 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
-using System.Windows.Shapes;
+using System.Windows.Media.Effects;
 using NOTM.Core.Display;
 
 namespace NOTM.UI;
@@ -21,13 +21,26 @@ public partial class MonitorVisualMap : UserControl
             typeof(MonitorVisualMap),
             new PropertyMetadata(null, OnDisplaysSourceChanged));
 
+    public static readonly DependencyProperty SelectedDisplayProperty =
+        DependencyProperty.Register(
+            nameof(SelectedDisplay),
+            typeof(DisplayInfo),
+            typeof(MonitorVisualMap),
+            new PropertyMetadata(null, OnSelectedDisplayChanged));
+
     public IEnumerable<DisplayInfo>? DisplaysSource
     {
         get => (IEnumerable<DisplayInfo>?)GetValue(DisplaysSourceProperty);
         set => SetValue(DisplaysSourceProperty, value);
     }
 
-    public event Action<DisplayInfo>? MonitorClicked;
+    public DisplayInfo? SelectedDisplay
+    {
+        get => (DisplayInfo?)GetValue(SelectedDisplayProperty);
+        set => SetValue(SelectedDisplayProperty, value);
+    }
+
+    public event Action<DisplayInfo>? MonitorSelected;
 
     public MonitorVisualMap()
     {
@@ -55,6 +68,14 @@ public partial class MonitorVisualMap : UserControl
         }
     }
 
+    private static void OnSelectedDisplayChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
+    {
+        if (d is MonitorVisualMap map)
+        {
+            map.Redraw();
+        }
+    }
+
     private void HookItemPropertyChanged(IEnumerable<DisplayInfo>? items, bool hook)
     {
         if (items == null) return;
@@ -76,7 +97,7 @@ public partial class MonitorVisualMap : UserControl
 
     private void OnItemPropertyChanged(object? sender, PropertyChangedEventArgs e)
     {
-        if (e.PropertyName is nameof(DisplayInfo.IsExcluded) or nameof(DisplayInfo.IsTargetPrimary))
+        if (e.PropertyName is nameof(DisplayInfo.IsExcluded) or nameof(DisplayInfo.IsTargetPrimary) or nameof(DisplayInfo.FriendlyName))
         {
             Dispatcher.Invoke(Redraw);
         }
@@ -95,8 +116,8 @@ public partial class MonitorVisualMap : UserControl
 
         EmptyNotice.Visibility = Visibility.Collapsed;
 
-        double availableW = ActualWidth > 40 ? ActualWidth - 40 : 540;
-        double availableH = ActualHeight > 40 ? ActualHeight - 40 : 120;
+        double availableW = ActualWidth > 60 ? ActualWidth - 60 : 640;
+        double availableH = ActualHeight > 50 ? ActualHeight - 50 : 160;
 
         int minX = displays.Min(d => d.Left);
         int minY = displays.Min(d => d.Top);
@@ -120,33 +141,54 @@ public partial class MonitorVisualMap : UserControl
         {
             double x = (d.Left - minX) * scale;
             double y = (d.Top - minY) * scale;
-            double w = Math.Max(40, d.Width * scale);
-            double h = Math.Max(30, d.Height * scale);
+            double w = Math.Max(60, d.Width * scale);
+            double h = Math.Max(48, d.Height * scale);
+
+            bool isSelected = SelectedDisplay != null && (SelectedDisplay == d || SelectedDisplay.DeviceName == d.DeviceName);
 
             var border = new Border
             {
                 Width = w,
                 Height = h,
-                CornerRadius = new CornerRadius(8),
-                BorderThickness = new Thickness(2),
+                CornerRadius = new CornerRadius(10),
                 Cursor = Cursors.Hand,
-                ToolTip = $"{d.DisplayTitle}\n{d.ResolutionString}\nStatus: {d.StatusDescription}"
+                ToolTip = $"{d.DisplayTitle}\nResolution: {d.ResolutionString}\nStatus: {d.StatusDescription}\nClick to select this display"
             };
 
-            if (d.IsTargetPrimary)
+            // Replicate Windows 11 Display Settings monitor block style
+            if (isSelected)
             {
-                border.Background = new SolidColorBrush(System.Windows.Media.Color.FromArgb(40, 16, 185, 129));
-                border.BorderBrush = new SolidColorBrush(System.Windows.Media.Color.FromRgb(16, 185, 129));
-            }
-            else if (d.IsExcluded)
-            {
-                border.Background = new SolidColorBrush(System.Windows.Media.Color.FromArgb(50, 239, 68, 68));
-                border.BorderBrush = new SolidColorBrush(System.Windows.Media.Color.FromRgb(239, 68, 68));
+                border.BorderBrush = new SolidColorBrush(System.Windows.Media.Color.FromRgb(59, 130, 246)); // Selected Accent Blue
+                border.BorderThickness = new Thickness(3);
+                border.Background = new SolidColorBrush(System.Windows.Media.Color.FromArgb(90, 37, 99, 235));
+                border.Effect = new DropShadowEffect
+                {
+                    Color = System.Windows.Media.Color.FromRgb(59, 130, 246),
+                    BlurRadius = 14,
+                    ShadowDepth = 0,
+                    Opacity = 0.4
+                };
             }
             else
             {
-                border.Background = new SolidColorBrush(System.Windows.Media.Color.FromArgb(30, 255, 255, 255));
-                border.BorderBrush = new SolidColorBrush(System.Windows.Media.Color.FromRgb(113, 113, 122));
+                border.BorderThickness = new Thickness(1.5);
+                border.Effect = null;
+
+                if (d.IsTargetPrimary)
+                {
+                    border.BorderBrush = new SolidColorBrush(System.Windows.Media.Color.FromRgb(16, 185, 129));
+                    border.Background = new SolidColorBrush(System.Windows.Media.Color.FromArgb(40, 16, 185, 129));
+                }
+                else if (d.IsExcluded)
+                {
+                    border.BorderBrush = new SolidColorBrush(System.Windows.Media.Color.FromRgb(239, 68, 68));
+                    border.Background = new SolidColorBrush(System.Windows.Media.Color.FromArgb(45, 239, 68, 68));
+                }
+                else
+                {
+                    border.BorderBrush = new SolidColorBrush(System.Windows.Media.Color.FromRgb(82, 82, 91));
+                    border.Background = new SolidColorBrush(System.Windows.Media.Color.FromArgb(25, 255, 255, 255));
+                }
             }
 
             var stack = new StackPanel
@@ -156,40 +198,57 @@ public partial class MonitorVisualMap : UserControl
                 Margin = new Thickness(4)
             };
 
-            // Badge / Index
+            // Monitor Number [1] or [2] (Large and bold like Windows Display settings)
             var indexText = new TextBlock
             {
                 Text = d.Index.ToString(),
-                FontSize = Math.Max(13, Math.Min(18, h * 0.28)),
+                FontSize = Math.Max(18, Math.Min(34, h * 0.40)),
                 FontWeight = FontWeights.Bold,
                 Foreground = Brushes.White,
                 HorizontalAlignment = System.Windows.HorizontalAlignment.Center
             };
             stack.Children.Add(indexText);
 
-            // Friendly Name (truncated if needed)
+            // Display Title / Friendly Name
             var nameText = new TextBlock
             {
                 Text = d.DisplayTitle,
-                FontSize = Math.Max(10, Math.Min(12, h * 0.18)),
-                Foreground = new SolidColorBrush(System.Windows.Media.Color.FromRgb(212, 212, 216)),
+                FontSize = Math.Max(10, Math.Min(12, h * 0.16)),
+                Foreground = new SolidColorBrush(System.Windows.Media.Color.FromRgb(228, 228, 231)),
+                FontWeight = FontWeights.SemiBold,
                 HorizontalAlignment = System.Windows.HorizontalAlignment.Center,
                 TextTrimming = TextTrimming.CharacterEllipsis,
-                MaxWidth = Math.Max(30, w - 8)
+                MaxWidth = Math.Max(40, w - 10)
             };
             stack.Children.Add(nameText);
 
-            // Status label
+            // Status Badge
+            string statusStr;
+            SolidColorBrush badgeColor;
+            if (d.IsTargetPrimary)
+            {
+                statusStr = "PRIMARY TARGET";
+                badgeColor = new SolidColorBrush(System.Windows.Media.Color.FromRgb(52, 211, 153));
+            }
+            else if (d.IsExcluded)
+            {
+                statusStr = "BLOCKED ⛔";
+                badgeColor = new SolidColorBrush(System.Windows.Media.Color.FromRgb(248, 113, 113));
+            }
+            else
+            {
+                statusStr = "ALLOWED";
+                badgeColor = new SolidColorBrush(System.Windows.Media.Color.FromRgb(161, 161, 170));
+            }
+
             var statusText = new TextBlock
             {
-                Text = d.IsTargetPrimary ? "TARGET" : (d.IsExcluded ? "BLOCKED" : "ALLOWED"),
+                Text = statusStr,
                 FontSize = 9,
-                FontWeight = FontWeights.SemiBold,
-                Foreground = d.IsTargetPrimary
-                    ? new SolidColorBrush(System.Windows.Media.Color.FromRgb(52, 211, 153))
-                    : (d.IsExcluded ? new SolidColorBrush(System.Windows.Media.Color.FromRgb(248, 113, 113)) : new SolidColorBrush(System.Windows.Media.Color.FromRgb(161, 161, 170))),
+                FontWeight = FontWeights.Bold,
+                Foreground = badgeColor,
                 HorizontalAlignment = System.Windows.HorizontalAlignment.Center,
-                Margin = new Thickness(0, 2, 0, 0)
+                Margin = new Thickness(0, 3, 0, 0)
             };
             stack.Children.Add(statusText);
 
@@ -197,7 +256,8 @@ public partial class MonitorVisualMap : UserControl
 
             border.MouseLeftButtonUp += (s, e) =>
             {
-                MonitorClicked?.Invoke(d);
+                SelectedDisplay = d;
+                MonitorSelected?.Invoke(d);
             };
 
             Canvas.SetLeft(border, x);

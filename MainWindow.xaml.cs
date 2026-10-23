@@ -1,8 +1,8 @@
 using System;
 using System.ComponentModel;
 using System.Windows;
-using System.Windows.Controls;
-using NOTM.Core.Display;
+using System.Windows.Interop;
+using NOTM.Core.Native;
 
 namespace NOTM;
 
@@ -17,6 +17,29 @@ public partial class MainWindow : Window
         InitializeComponent();
         ViewModel = viewModel;
         DataContext = ViewModel;
+    }
+
+    protected override void OnSourceInitialized(EventArgs e)
+    {
+        base.OnSourceInitialized(e);
+
+        // Hook window message loop for WM_DISPLAYCHANGE to auto-detect monitor plug/unplug or sleep/wake
+        var handle = new WindowInteropHelper(this).Handle;
+        var source = HwndSource.FromHwnd(handle);
+        source?.AddHook(WndProc);
+    }
+
+    private IntPtr WndProc(IntPtr hwnd, int msg, IntPtr wParam, IntPtr lParam, ref bool handled)
+    {
+        if (msg == Win32.WM_DISPLAYCHANGE)
+        {
+            // Windows display resolution or monitor setup changed!
+            Dispatcher.InvokeAsync(() =>
+            {
+                ViewModel.LoadDisplays();
+            });
+        }
+        return IntPtr.Zero;
     }
 
     public void RequestExplicitExit()
@@ -54,37 +77,23 @@ public partial class MainWindow : Window
         ViewModel.LoadDisplays();
     }
 
-    private void OnSetPrimaryClicked(object sender, RoutedEventArgs e)
+    private void OnSetSelectedAsPrimaryClicked(object sender, RoutedEventArgs e)
     {
-        if (sender is Button { Tag: DisplayInfo display })
-        {
-            ViewModel.SetTargetPrimary(display);
-        }
+        ViewModel.SetSelectedAsPrimary();
     }
 
-    private void OnToggleBlockClicked(object sender, RoutedEventArgs e)
+    private void OnToggleSelectedBlockClicked(object sender, RoutedEventArgs e)
     {
-        if (sender is Button { Tag: DisplayInfo display })
-        {
-            ViewModel.ToggleExcluded(display);
-        }
+        ViewModel.ToggleSelectedExcluded();
     }
 
-    private void OnIdentifySingleClicked(object sender, RoutedEventArgs e)
+    private void OnIdentifySelectedClicked(object sender, RoutedEventArgs e)
     {
-        if (sender is Button { Tag: DisplayInfo display })
-        {
-            ViewModel.IdentifySingleDisplay(display);
-        }
+        ViewModel.IdentifySelected();
     }
 
     private void OnClearLogClicked(object sender, RoutedEventArgs e)
     {
         ViewModel.ClearLog();
-    }
-
-    private void OnMapMonitorClicked(DisplayInfo display)
-    {
-        ViewModel.ToggleExcluded(display);
     }
 }

@@ -55,6 +55,26 @@ public class MainWindowViewModel : INotifyPropertyChanged
         }
     }
 
+    private DisplayInfo? _selectedDisplay;
+
+    public DisplayInfo? SelectedDisplay
+    {
+        get => _selectedDisplay;
+        set
+        {
+            if (_selectedDisplay != value)
+            {
+                _selectedDisplay = value;
+                OnPropertyChanged();
+                OnPropertyChanged(nameof(IsSelectedPrimary));
+                OnPropertyChanged(nameof(IsSelectedExcluded));
+            }
+        }
+    }
+
+    public bool IsSelectedPrimary => SelectedDisplay?.IsTargetPrimary ?? false;
+    public bool IsSelectedExcluded => SelectedDisplay?.IsExcluded ?? false;
+
     public int BlockedCount => Displays.Count(d => d.IsExcluded);
     public int AllowedCount => Displays.Count(d => !d.IsExcluded);
 
@@ -132,7 +152,6 @@ public class MainWindowViewModel : INotifyPropertyChanged
 
         _engine.OnWindowRelocated += HandleWindowRelocated;
         _trayService.OnGuardToggled += (enabled) => IsGuardActive = enabled;
-        _trayService.OnSweepRequested += () => SweepNow();
         _trayService.OnIdentifyRequested += () => IdentifyAllDisplays();
 
         LoadDisplays();
@@ -173,9 +192,40 @@ public class MainWindowViewModel : INotifyPropertyChanged
         // If no target primary is set or target primary is excluded, pick OS primary or first non-excluded
         EnsureValidTargetPrimary();
 
+        // Default selection to target primary or first display
+        SelectedDisplay = Displays.FirstOrDefault(d => d.IsTargetPrimary) ?? Displays.FirstOrDefault();
+
         SyncConfiguration();
         OnPropertyChanged(nameof(BlockedCount));
         OnPropertyChanged(nameof(AllowedCount));
+    }
+
+    public void SetSelectedAsPrimary()
+    {
+        if (SelectedDisplay != null)
+        {
+            SetTargetPrimary(SelectedDisplay);
+            OnPropertyChanged(nameof(IsSelectedPrimary));
+            OnPropertyChanged(nameof(IsSelectedExcluded));
+        }
+    }
+
+    public void ToggleSelectedExcluded()
+    {
+        if (SelectedDisplay != null)
+        {
+            ToggleExcluded(SelectedDisplay);
+            OnPropertyChanged(nameof(IsSelectedPrimary));
+            OnPropertyChanged(nameof(IsSelectedExcluded));
+        }
+    }
+
+    public void IdentifySelected()
+    {
+        if (SelectedDisplay != null)
+        {
+            IdentifySingleDisplay(SelectedDisplay);
+        }
     }
 
     private void EnsureValidTargetPrimary()

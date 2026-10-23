@@ -4,126 +4,125 @@
 [![Platform](https://img.shields.io/badge/Platform-Windows%2010%20%2F%2011-0078D6?logo=windows)](https://microsoft.com/windows)
 [![License](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
-**NOTM** is a lightweight, background Windows system tray utility that restricts which monitors can be used for applications—without disconnecting or disabling them in Windows.
+**NOTM** is a focused, ultra-lightweight Windows system tray utility designed to restrict which monitors can actually be used for applications—without disconnecting or detaching them in Windows.
 
 ---
 
 ### The Problem It Solves
 
-When connecting a soundbar, AV receiver, or TV via HDMI (such as a **Panasonic SoundSlayer**, Dolby Atmos sound system, or capture card), Windows treats the HDMI audio connection as an active monitor. 
+When an HDMI audio device, soundbar (such as a **Panasonic SoundSlayer**), AV receiver, or dummy plug is connected to your Windows PC, Windows creates an active virtual/physical monitor for it.
 
-If you disable or disconnect the monitor in Windows Display Settings, **the audio stops working**. But if you leave it enabled:
-- Windows applications and dialog boxes randomly open on the soundbar display.
-- Maximized apps or windows get dragged onto the off-limits screen and disappear.
+If you disable or disconnect the monitor in Windows Display Settings, **audio stops working**. But if you leave it enabled:
+- Applications, dialogues, and installer wizards randomly launch or wander off onto the soundbar screen.
+- Maximized windows or dragged windows get lost off-screen.
 - Mouse cursors slide off into nowhere.
 
-**NOTM solves this completely:** It keeps your soundbar or secondary display active for audio, but strictly prevents any window from residing on it. The moment an application opens on or is moved to an off-limits display, NOTM automatically bounces it back to your primary screen.
+**NOTM solves this with a single, clear purpose**: It leaves your soundbar active for audio, but strictly forbids any application window from residing on it. If an application is moved to or launched on an off-limits monitor, NOTM instantly redirects it back to your primary monitor.
 
 ---
 
-## Features
+## Key Features & Polish
 
-- 🛡️ **Instant Window Guard**: Listens to native Win32 window events (`EVENT_SYSTEM_MOVESIZEEND`, `EVENT_OBJECT_SHOW`, `EVENT_SYSTEM_FOREGROUND`) with zero CPU overhead. If any window lands on an off-limits monitor, it is relocated to your primary screen immediately upon mouse release or launch.
-- 🕒 **Safeguard Sweep Engine**: A background safeguard periodically checks all visible top-level windows to catch stubborn or background apps that quietly restored their positions off-screen.
-- 👁️ **Visual Monitor Identification**: Click **Identify Displays** to flash large, translucent, click-through numbered cards (`[ 1 ]`, `[ 2 ]`) on all screens—displaying friendly hardware names (e.g., `AW3423DWF`, `SOUNDSLAYER`) and resolutions.
-- 🗺️ **Interactive Topology Map**: A mini scaled visual preview of your monitors arranged according to their real physical coordinates and aspect ratios. Click on any screen in the preview to toggle its blocked/allowed status.
-- 📌 **System Tray Integration**: Lives silently in your Windows notification area. Closing or minimizing the window keeps NOTM running in the tray. Double-click the tray icon to open, or right-click for quick actions.
-- 📋 **Live Activity Feed**: Tracks window redirects in real-time, displaying process names, window titles, timestamps, and source/target displays.
-- 🚀 **Auto-Start with Windows**: Toggleable right from the UI, registering clean startup entries in `HKCU\Software\Microsoft\Windows\CurrentVersion\Run`.
-- 💾 **Persistent Settings**: Remembers your designated primary and blocked monitors across reboots, matched by hardware ID so changes persist even if display cables are replugged.
+### 1. Replicates Windows 11 "System > Display" Settings
+- Interactive visual monitor arrangement showing your displays drawn to their **actual physical relative resolution and positions**.
+- Numbered display blocks (`1`, `2`) mirroring Windows Display Settings.
+- Click any display block to select it and configure its role:
+  - **Primary Target Display**: All off-limits windows are redirected here.
+  - **Block Display (Not in Use)**: Forbids application windows from staying on this screen.
+- **Identify Displays Button**: Positioned directly under the visual canvas (just like Windows Settings) to flash large, translucent, click-through numbered cards (`[ 1 ]`, `[ 2 ]`) on your screens.
 
----
+### 2. Custom System Tray Icon
+- **When Active**: Displays a monitor icon with the **red forbidden / no-entry symbol (⛔ red circle with a horizontal bar)**.
+- **When Toggled Off**: The forbidden overlay is removed, leaving a clean neutral monitor icon.
+- **Clicking the Tray Icon**: Left-clicking or right-clicking immediately displays two primary actions:
+  1. **Open NOTM** (launches the dashboard)
+  2. **Guard Active (Toggle On/Off)** (switches protection on or off instantly)
+- Zero GDI memory leaks: Automatically releases native `HICON` handles.
 
-## Getting Started
+### 3. Automatic Hardware Change Detection (`WM_DISPLAYCHANGE`)
+- Listens to Windows OS display broadcast messages (`WM_DISPLAYCHANGE`).
+- When your soundbar powers on/off, wakes from sleep, or display cables are reconnected, NOTM automatically refreshes and maintains your configuration without needing a restart.
 
-### Prerequisites
-
-- Windows 10 (version 1809+) or Windows 11 (64-bit).
-- [.NET 8.0 SDK / Runtime](https://dotnet.microsoft.com/download/dotnet/8.0) (if building from source).
-
----
-
-### Quick Start (Running from Source)
-
-1. Clone the repository:
-   ```powershell
-   git clone https://github.com/goldcd/NOTM.git
-   cd NOTM
-   ```
-2. Run the application:
-   - Double-click **`run.cmd`**, or run:
-     ```powershell
-     dotnet run
-     ```
+### 4. Non-Intrusive Win32 Window Guard
+- Listens to native Win32 window events (`EVENT_SYSTEM_MOVESIZEEND`, `EVENT_OBJECT_SHOW`, `EVENT_SYSTEM_FOREGROUND`).
+- Zero CPU usage when idle (~25 MB RAM).
+- Includes a low-overhead background safeguard sweep to catch stubborn background windows.
 
 ---
 
-### Building a Standalone Single-File `.exe`
+## Installation & Uninstallation
 
-To produce a single, portable executable that can be moved anywhere and requires **no external runtimes or installation**:
+NOTM is designed to be trivial to compile, install, and uninstall without requiring third-party tools or administrative privileges.
 
-1. Double-click **`publish.cmd`**, or run:
-   ```powershell
-   powershell -ExecutionPolicy Bypass -File publish.ps1
-   ```
-2. Find your single-file executable in the `dist/` directory:
-   ```
-   dist/NOTM.exe
-   ```
-3. Run `NOTM.exe`—it starts immediately and sits in your system tray!
+### 1. One-Click Install
+Double-click **`install.cmd`** (or run `powershell -ExecutionPolicy Bypass -File install.ps1`):
+1. Compiles the standalone release executable `NOTM.exe`.
+2. Installs to `%LocalAppData%\Programs\NOTM\`.
+3. Creates a Start Menu shortcut ("NOTM").
+4. Registers NOTM in **Windows Settings > Apps > Installed Apps** (Add/Remove Programs) with version, publisher, and icon.
+5. Launches NOTM immediately.
 
----
-
-## How to Use
-
-1. **Launch NOTM**: The main dashboard displays all connected monitors with their hardware names (e.g. `AW3423DWF`, `SOUNDSLAYER`) and resolutions.
-2. **Mark Your Primary**: Click **Set Primary** on your main display (e.g., your Dell Alienware monitor). All blocked applications will be redirected here.
-3. **Block Unused Monitors**: Click **Block Display** on your soundbar, dummy plug, or any display you do not want windows to appear on.
-   - The status badge will change to <span style="color:red">**OFF-LIMITS (BLOCKED)**</span>.
-   - Any windows currently resting on that monitor will be swept to the primary monitor immediately.
-4. **Minimize to Tray**: Click the window close button (`✕`). NOTM will minimize to the system tray, continuing to guard your displays silently in the background.
+### 2. One-Click Uninstall
+- Go to **Windows Settings > Apps > Installed Apps > NOTM > Uninstall**, OR
+- Double-click **`uninstall.cmd`**:
+  - Closes any running NOTM processes.
+  - Removes the Start Menu shortcut.
+  - Removes the Windows Startup registry entry.
+  - Removes the Windows Installed Apps entry.
+  - Deletes `%LocalAppData%\Programs\NOTM\`.
+  - Leaves 0 leftover files.
 
 ---
 
-## Architecture & Code Structure
+## Compilation & Development Scripts
 
-NOTM is built with modern C# (.NET 8 WPF) following clean architecture principles and native Win32 interop:
+| Script | Purpose |
+| :--- | :--- |
+| **`run.cmd`** | Runs NOTM in debug mode directly from source (`dotnet run`). |
+| **`build.cmd`** | Compiles the Visual Studio solution (`NOTM.sln`) in Release mode and validates 0 errors. |
+| **`publish.cmd`** | Compiles a standalone, single-file `dist\NOTM.exe` (no .NET runtime required to run). |
+| **`install.cmd`** | Compiles and installs NOTM to your Windows system with Start Menu shortcut. |
+| **`uninstall.cmd`** | Completely and cleanly removes NOTM from your Windows system. |
+| **`installer.iss`** | Optional Inno Setup script to generate a classic setup wizard installer (`.exe`). |
+
+---
+
+## Project Structure
 
 ```
 NOTM/
 ├── Core/
 │   ├── Native/
-│   │   └── Win32.cs               # Win32 P/Invoke signatures (SetWinEventHook, EnumDisplayMonitors, DWM)
+│   │   └── Win32.cs               # Win32 P/Invoke signatures (SetWinEventHook, DWM, WM_DISPLAYCHANGE)
 │   ├── Display/
 │   │   ├── DisplayInfo.cs         # Model representing monitor geometry, status, and friendly names
 │   │   └── DisplayService.cs      # Queries monitors via EnumDisplayMonitors + WMI (WmiMonitorID EDID)
 │   ├── Engine/
-│   │   └── WindowRelocationEngine.cs # WinEvent hooks and smart repositioning logic
+│   │   └── WindowRelocationEngine.cs # WinEvent hooks and safe repositioning logic
 │   ├── Config/
 │   │   ├── AppSettings.cs         # Settings data contract
 │   │   └── ConfigService.cs       # JSON serialization to %LocalAppData%\NOTM\settings.json
 │   ├── Startup/
 │   │   └── StartupService.cs      # Windows registry Run key manager
 │   └── Tray/
-│       └── TrayIconService.cs     # Windows notification area icon & context menu
+│       └── TrayIconService.cs     # System tray icon with forbidden overlay & 2-option menu
 ├── UI/
-│   ├── MainWindow.xaml / .cs      # Fluent dark UI dashboard
+│   ├── MainWindow.xaml / .cs      # Windows 11 Display Settings style dashboard
 │   ├── MainWindowViewModel.cs     # MVVM ViewModel coordinating UI, engine, and tray
-│   ├── MonitorVisualMap.xaml / .cs # Custom visual monitor topology preview
-│   ├── IdentifyOverlayWindow.xaml / .cs # Full-screen translucent click-through identification cards
-│   └── Converters.cs              # WPF Value Converters for buttons and status indicators
+│   ├── MonitorVisualMap.xaml / .cs # Scaled physical topology preview with selection
+│   ├── IdentifyOverlayWindow.xaml / .cs # Click-through screen identification cards
+│   └── Converters.cs              # WPF Value Converters
 ├── Assets/
 │   └── app.ico                    # High-res application icon
 ├── NOTM.sln                       # Visual Studio Solution
 ├── NOTM.csproj                    # Project configuration
-├── run.cmd                        # One-click launcher
-└── publish.cmd                    # One-click standalone build script
+├── install.cmd / install.ps1      # Automated per-user installer
+├── uninstall.cmd / uninstall.ps1  # Automated uninstaller
+├── run.cmd                        # One-click debug launcher
+├── build.cmd                      # One-click solution compiler
+├── publish.cmd / publish.ps1      # Single-file standalone publisher
+└── installer.iss                  # Optional Inno Setup wizard compiler
 ```
-
-### Why Native C# WPF?
-- **Near-Zero Resource Usage**: Consumes ~25 MB RAM and 0% CPU at idle, compared to 150MB+ for Electron-based utilities.
-- **Deep Windows API Integration**: Uses `SetWinEventHook` with out-of-context callbacks for instant drop detection, `DwmGetWindowAttribute` for pixel-perfect window frame calculations (accounting for drop shadows), and WMI `WmiMonitorID` for EDID-level display identification.
-- **Click-Through Overlays**: Identification badges use `WS_EX_TRANSPARENT | WS_EX_LAYERED | WS_EX_TOOLWINDOW` so you can continue typing and clicking while monitors are identified.
 
 ---
 

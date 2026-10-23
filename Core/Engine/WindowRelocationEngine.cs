@@ -290,13 +290,16 @@ public class WindowRelocationEngine : IDisposable
 
         bool isZoomed = Win32.IsZoomed(hWnd);
 
-        // Calculate target dimensions
-        int targetWidth = Math.Min(rect.Width, targetPrimary.WorkWidth);
-        int targetHeight = Math.Min(rect.Height, targetPrimary.WorkHeight);
+        // Calculate target dimensions ensuring it is visible and fits inside target working area
+        int targetWidth = Math.Max(320, Math.Min(rect.Width, targetPrimary.WorkWidth));
+        int targetHeight = Math.Max(240, Math.Min(rect.Height, targetPrimary.WorkHeight));
 
-        // Center on target primary working area
+        // Center on target primary working area and clamp to bounds
         int targetX = targetPrimary.WorkLeft + Math.Max(0, (targetPrimary.WorkWidth - targetWidth) / 2);
         int targetY = targetPrimary.WorkTop + Math.Max(0, (targetPrimary.WorkHeight - targetHeight) / 2);
+
+        targetX = Math.Max(targetPrimary.WorkLeft, Math.Min(targetX, targetPrimary.WorkRight - targetWidth));
+        targetY = Math.Max(targetPrimary.WorkTop, Math.Min(targetY, targetPrimary.WorkBottom - targetHeight));
 
         if (isZoomed)
         {
