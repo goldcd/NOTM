@@ -23,32 +23,45 @@ When you connect an HDMI soundbar (such as a Panasonic SoundSlayer), AV receiver
 
 ## 2. How to Use It
 
-### ⚡ Quick Install (One-Line PowerShell)
-Open PowerShell (no administrator rights required) and paste:
-```powershell
-irm https://raw.githubusercontent.com/goldcd/NOTM/main/install.ps1 | iex
+### ⚡ Getting Started
+
+#### Option A: Download Standalone Executable (Recommended)
+1. Go to **[Releases](https://github.com/goldcd/NOTM/releases/latest)**.
+2. Download **`NOTM.exe`**.
+3. Run it from anywhere — no installation or external runtimes required.
+
+#### Option B: One-Click Installer (Local)
+1. Download or clone this repository.
+2. Double-click **`install.cmd`** (no administrator rights needed).
+   - Installs cleanly to `%LocalAppData%\Programs\NOTM`
+   - Creates a Start Menu shortcut
+   - Adds NOTM to Windows Settings > Installed Apps
+
+#### Option C: Build from Source
+```cmd
+git clone https://github.com/goldcd/NOTM.git
+cd NOTM
+publish.cmd
 ```
-*What this does: downloads NOTM from GitHub, installs it cleanly to `%LocalAppData%\Programs\NOTM`, creates a Start Menu shortcut, registers it in Windows Installed Apps, and starts NOTM.*
+*`publish.cmd` builds the standalone, self-contained single-file executable to `dist\NOTM.exe` (note: `dist/` is `.gitignore`d to prevent large binary bloat in the git repository).*
 
 ---
 
-### Manual Installation & Running
-1. **Run or Install**:
-   - **One-Click Install**: Run `install.cmd` or `install.ps1` (no admin privileges required).
-   - **Standalone**: Launch `dist\NOTM.exe` directly without installing.
-2. **Configure Displays**:
-   - Open NOTM (it opens on start, or double-click its system tray icon).
-   - The UI shows your monitors arranged to match their physical positions in Windows Display Settings.
-   - Click **Identify Displays** to display large numbered labels on your screens.
+### How to Use NOTM
+1. **Configure Displays**:
+   - Open NOTM (it opens on start, or left-click its system tray icon by the clock).
+   - The UI shows your displays arranged according to their Windows Display Settings positions.
+   - Click **Identify Displays** to flash large labels onto all screens.
    - Select your soundbar / secondary display and click **Block Display (Not in Use)**.
-   - Ensure your main monitor is marked as **Primary**.
-3. **Tray Controls**:
-   - Closing the window minimizes NOTM to the system tray.
-   - Clicking the tray icon gives two options:
-     - **Open NOTM**: Opens the settings window.
-     - **Guard: Active / Paused**: Instantly toggles window protection on or off.
+   - Ensure your main monitor is marked as **Primary Target**.
+2. **Audio Keep-Alive**:
+   - For any display with an associated HDMI/DP audio endpoint (such as the SoundSlayer), the **Keep Audio Alive** card is automatically available and enabled.
+3. **Tray Controls (by the Clock)**:
+   - **Left-Click**: Instantly opens / restores the NOTM GUI.
+   - **Right-Click**: Opens the quick menu (*Open NOTM*, *Guard: Active/Paused toggle*, *Identify Displays*, *Reset Target*, and *Exit*).
 
-To uninstall completely, double-click `uninstall.cmd` or uninstall from **Windows Settings > Apps > Installed Apps**.
+To uninstall completely, run `uninstall.cmd` or uninstall from **Windows Settings > Apps > Installed Apps**.
+
 
 ---
 
