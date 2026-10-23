@@ -248,6 +248,16 @@ public class MainWindowViewModel : INotifyPropertyChanged
             Displays.Add(m);
         }
 
+        // If the saved target primary monitor is no longer connected (e.g. replaced with a new monitor),
+        // clear the stale reference so NOTM cleanly adopts the new Windows primary.
+        if (!string.IsNullOrEmpty(_settings.TargetPrimaryHardwareId) &&
+            !monitors.Any(m => m.HardwareId == _settings.TargetPrimaryHardwareId || m.DeviceName == _settings.TargetPrimaryDeviceName))
+        {
+            _settings.TargetPrimaryHardwareId = null;
+            _settings.TargetPrimaryDeviceName = null;
+            SaveSettings();
+        }
+
         // If no target primary is set or target primary is excluded, pick OS primary or first non-excluded
         EnsureValidTargetPrimary();
 
@@ -299,6 +309,9 @@ public class MainWindowViewModel : INotifyPropertyChanged
             if (target != null)
             {
                 foreach (var d in Displays) d.IsTargetPrimary = (d == target);
+                _settings.TargetPrimaryHardwareId = target.HardwareId;
+                _settings.TargetPrimaryDeviceName = target.DeviceName;
+                SaveSettings();
             }
         }
     }

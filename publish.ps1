@@ -5,6 +5,10 @@ Write-Host "==========================================" -ForegroundColor Cyan
 Write-Host " Publishing NOTM (Single-File Release)   " -ForegroundColor Cyan
 Write-Host "==========================================" -ForegroundColor Cyan
 
+# Stop any running NOTM instances so binaries aren't locked
+Get-Process -Name "NOTM" -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue
+Start-Sleep -Milliseconds 300
+
 $distDir = Join-Path $PSScriptRoot "dist"
 if (Test-Path $distDir) {
     Remove-Item -Recurse -Force $distDir
