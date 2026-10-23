@@ -254,16 +254,6 @@
                               VerticalAlignment="Center"
                               Cursor="Hand"/>
 
-                    <!-- Keep Audio Awake (Inspired by SoundKeeper) -->
-                    <CheckBox Content="Keep Audio Awake"
-                              IsChecked="{Binding KeepAudioAwake}"
-                              Foreground="#A1A1AA"
-                              FontSize="12"
-                              Margin="0,0,16,0"
-                              VerticalAlignment="Center"
-                              Cursor="Hand"
-                              ToolTip="Prevents HDMI soundbars and AV receivers from entering standby or clipping the start of audio (Inspired by SoundKeeper by vrubleg)"/>
-
                     <!-- Sweep Button -->
                     <Button Content="⚡ Sweep"
                             Style="{StaticResource ActionButtonStyle}"
@@ -398,60 +388,114 @@
 
                 <!-- Option Rows for Selected Display -->
                 <Border Grid.Row="1" Background="#1D1D21" BorderBrush="#2A2A2E" BorderThickness="1" CornerRadius="8" Padding="12,10">
-                    <Grid>
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="*"/>
-                            <ColumnDefinition Width="14"/>
-                            <ColumnDefinition Width="*"/>
-                        </Grid.ColumnDefinitions>
+                    <StackPanel>
+                        <!-- Options Grid -->
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="14"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
 
-                        <!-- Primary Target Option -->
-                        <Border Grid.Column="0" Background="#26262B" BorderBrush="#333338" BorderThickness="1" CornerRadius="6" Padding="12,10">
+                            <!-- Primary Target Option -->
+                            <Border Grid.Column="0" Background="#26262B" BorderBrush="#333338" BorderThickness="1" CornerRadius="6" Padding="12,10">
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+
+                                    <StackPanel Grid.Column="0" VerticalAlignment="Center">
+                                        <TextBlock Text="Primary Target Display" FontSize="13" FontWeight="SemiBold" Foreground="White"/>
+                                        <TextBlock Text="All windows from blocked monitors will be redirected here."
+                                                   FontSize="11" Foreground="#9E9EA6" TextWrapping="Wrap" Margin="0,2,0,0"/>
+                                    </StackPanel>
+
+                                    <!-- Requirement 3: Enabled ONLY if this NOTM app is currently on this display -->
+                                    <Button Grid.Column="1"
+                                            Content="{Binding SelectedDisplay.IsTargetPrimary, Converter={x:Static ui:PrimaryButtonTextConverter.Instance}}"
+                                            Style="{StaticResource ActionButtonStyle}"
+                                            IsEnabled="{Binding CanSetSelectedAsPrimary}"
+                                            ToolTip="{Binding PrimaryButtonToolTip}"
+                                            Click="OnSetSelectedAsPrimaryClicked"
+                                            VerticalAlignment="Center"/>
+                                </Grid>
+                            </Border>
+
+                            <!-- Block/Allow Toggle Option -->
+                            <Border Grid.Column="2" Background="#26262B" BorderBrush="#333338" BorderThickness="1" CornerRadius="6" Padding="12,10">
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+
+                                    <StackPanel Grid.Column="0" VerticalAlignment="Center">
+                                        <TextBlock Text="Block Display (Not in Use)" FontSize="13" FontWeight="SemiBold" Foreground="White"/>
+                                        <TextBlock Text="Prevent applications from using this screen (audio remains active)."
+                                                   FontSize="11" Foreground="#9E9EA6" TextWrapping="Wrap" Margin="0,2,0,0"/>
+                                    </StackPanel>
+
+                                    <Button Grid.Column="1"
+                                            Content="{Binding SelectedDisplay.IsExcluded, Converter={x:Static ui:BlockButtonTextConverter.Instance}}"
+                                            Style="{Binding SelectedDisplay.IsExcluded, Converter={x:Static ui:BlockButtonStyleConverter.Instance}}"
+                                            Click="OnToggleSelectedBlockClicked"
+                                            VerticalAlignment="Center"/>
+                                </Grid>
+                            </Border>
+                        </Grid>
+
+                        <!-- Audio Keep-Alive Option (Only visible when monitor has an associated audio output) -->
+                        <Border Background="#26262B"
+                                BorderBrush="#333338"
+                                BorderThickness="1"
+                                CornerRadius="6"
+                                Padding="12,10"
+                                Margin="0,10,0,0"
+                                Visibility="{Binding SelectedDisplay.HasAudioEndpoint, Converter={x:Static ui:BooleanToVisibilityConverter.Instance}}">
                             <Grid>
                                 <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto"/>
                                     <ColumnDefinition Width="*"/>
                                     <ColumnDefinition Width="Auto"/>
                                 </Grid.ColumnDefinitions>
 
-                                <StackPanel Grid.Column="0" VerticalAlignment="Center">
-                                    <TextBlock Text="Primary Target Display" FontSize="13" FontWeight="SemiBold" Foreground="White"/>
-                                    <TextBlock Text="All windows from blocked monitors will be redirected here."
+                                <!-- Speaker Icon Badge -->
+                                <Border Grid.Column="0"
+                                        Width="30" Height="30"
+                                        CornerRadius="6"
+                                        Background="#1E293B"
+                                        BorderBrush="#334155"
+                                        BorderThickness="1"
+                                        Margin="0,0,12,0"
+                                        VerticalAlignment="Center">
+                                    <TextBlock Text="🔊" FontSize="13" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                </Border>
+
+                                <!-- Description & Connected Audio Device -->
+                                <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                        <TextBlock Text="Keep Audio Alive" FontSize="13" FontWeight="SemiBold" Foreground="White" Margin="0,0,8,0"/>
+                                        <Border Background="#143628" BorderBrush="#1E543E" BorderThickness="1" CornerRadius="4" Padding="6,1" VerticalAlignment="Center">
+                                            <TextBlock Text="HDMI Audio" FontSize="10" FontWeight="SemiBold" Foreground="#34D399"/>
+                                        </Border>
+                                    </StackPanel>
+                                    <TextBlock Text="{Binding SelectedDisplay.AudioEndpointSubtitle, FallbackValue='Prevents HDMI soundbar from sleeping'}"
                                                FontSize="11" Foreground="#9E9EA6" TextWrapping="Wrap" Margin="0,2,0,0"/>
                                 </StackPanel>
 
-                                <!-- Requirement 3: Enabled ONLY if this NOTM app is currently on this display -->
-                                <Button Grid.Column="1"
-                                        Content="{Binding SelectedDisplay.IsTargetPrimary, Converter={x:Static ui:PrimaryButtonTextConverter.Instance}}"
-                                        Style="{StaticResource ActionButtonStyle}"
-                                        IsEnabled="{Binding CanSetSelectedAsPrimary}"
-                                        ToolTip="{Binding PrimaryButtonToolTip}"
-                                        Click="OnSetSelectedAsPrimaryClicked"
-                                        VerticalAlignment="Center"/>
+                                <!-- Clean, compact toggle CheckBox -->
+                                <CheckBox Grid.Column="2"
+                                          IsChecked="{Binding SelectedDisplay.KeepAudioAlive}"
+                                          Foreground="#E2E8F0"
+                                          FontSize="12"
+                                          VerticalAlignment="Center"
+                                          Cursor="Hand"
+                                          Content="Enabled"
+                                          ToolTip="Sends inaudible sub-bit WASAPI pulses directly to this soundbar/monitor to prevent standby without waking any other devices (Inspired by SoundKeeper by vrubleg)"/>
                             </Grid>
                         </Border>
-
-                        <!-- Block/Allow Toggle Option -->
-                        <Border Grid.Column="2" Background="#26262B" BorderBrush="#333338" BorderThickness="1" CornerRadius="6" Padding="12,10">
-                            <Grid>
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="*"/>
-                                    <ColumnDefinition Width="Auto"/>
-                                </Grid.ColumnDefinitions>
-
-                                <StackPanel Grid.Column="0" VerticalAlignment="Center">
-                                    <TextBlock Text="Block Display (Not in Use)" FontSize="13" FontWeight="SemiBold" Foreground="White"/>
-                                    <TextBlock Text="Prevent applications from using this screen (audio remains active)."
-                                               FontSize="11" Foreground="#9E9EA6" TextWrapping="Wrap" Margin="0,2,0,0"/>
-                                </StackPanel>
-
-                                <Button Grid.Column="1"
-                                        Content="{Binding SelectedDisplay.IsExcluded, Converter={x:Static ui:BlockButtonTextConverter.Instance}}"
-                                        Style="{Binding SelectedDisplay.IsExcluded, Converter={x:Static ui:BlockButtonStyleConverter.Instance}}"
-                                        Click="OnToggleSelectedBlockClicked"
-                                        VerticalAlignment="Center"/>
-                            </Grid>
-                        </Border>
-                    </Grid>
+                    </StackPanel>
                 </Border>
             </Grid>
         </Border>

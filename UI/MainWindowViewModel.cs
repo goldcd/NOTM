@@ -264,11 +264,23 @@ public class MainWindowViewModel : INotifyPropertyChanged
                 m.IsTargetPrimary = true;
             }
 
+            if (m.HasAudioEndpoint)
+            {
+                bool isDisabled = _settings.DisabledAudioKeepAliveMonitors.Contains(m.HardwareId) ||
+                                  _settings.DisabledAudioKeepAliveMonitors.Contains(m.FriendlyName) ||
+                                  (!string.IsNullOrEmpty(m.AudioEndpointId) && _settings.DisabledAudioKeepAliveMonitors.Contains(m.AudioEndpointId));
+                m.KeepAudioAlive = !isDisabled;
+            }
+
             m.PropertyChanged += (s, e) =>
             {
                 if (e.PropertyName is nameof(DisplayInfo.IsExcluded) or nameof(DisplayInfo.IsTargetPrimary))
                 {
                     OnDisplaySettingChanged(m, e.PropertyName);
+                }
+                else if (e.PropertyName == nameof(DisplayInfo.KeepAudioAlive))
+                {
+                    OnDisplayAudioSettingChanged(m);
                 }
             };
 
@@ -292,6 +304,7 @@ public class MainWindowViewModel : INotifyPropertyChanged
         SelectedDisplay = Displays.FirstOrDefault(d => d.IsTargetPrimary) ?? Displays.FirstOrDefault();
 
         SyncConfiguration();
+        UpdateAudioKeepAliveTargets();
         OnPropertyChanged(nameof(BlockedCount));
         OnPropertyChanged(nameof(AllowedCount));
     }
@@ -448,6 +461,43 @@ public class MainWindowViewModel : INotifyPropertyChanged
                 _settings.ExcludedIdentifiers.Add(d.FriendlyName);
             else
                 _settings.ExcludedIdentifiers.Add(d.DeviceName);
+        }
+    }
+
+    private void OnDisplayAudioSettingChanged(DisplayInfo display)
+    {
+        if (!display.KeepAudioAlive)
+        {
+            if (!string.IsNullOrEmpty(display.HardwareId) && !_settings.DisabledAudioKeepAliveMonitors.Contains(display.HardwareId))
+                _settings.DisabledAudioKeepAliveMonitors.Add(display.HardwareId);
+            if (!string.IsNullOrEmpty(display.FriendlyName) && !_settings.DisabledAudioKeepAliveMonitors.Contains(display.FriendlyName))
+                _settings.DisabledAudioKeepAliveMonitors.Add(display.FriendlyName);
+            if (!string.IsNullOrEmpty(display.AudioEndpointId) && !_settings.DisabledAudioKeepAliveMonitors.Contains(display.AudioEndpointId))
+                _settings.DisabledAudioKeepAliveMonitors.Add(display.AudioEndpointId);
+        }
+        else
+        {
+            if (!string.IsNullOrEmpty(display.HardwareId))
+                _settings.DisabledAudioKeepAliveMonitors.Remove(display.HardwareId);
+            if (!string.IsNullOrEmpty(display.FriendlyName))
+                _settings.DisabledAudioKeepAliveMonitors.Remove(display.FriendlyName);
+            if (!string.IsNullOrEmpty(display.AudioEndpointId))
+                _settings.DisabledAudioKeepAliveMonitors.Remove(display.AudioEndpointId);
+        }
+
+        SaveSettings();
+        UpdateAudioKeepAliveTargets();
+    }
+
+    public void UpdateAudioKeepAliveTargets()
+    {
+        if (_audioService != null)
+        {
+            var activeEndpointIds = Displays
+                .Where(d => d.HasAudioEndpoint && d.KeepAudioAlive && !string.IsNullOrEmpty(d.AudioEndpointId))
+                .Select(d => d.AudioEndpointId!)
+                .ToList();
+            _audioService.SetTargetEndpoints(activeEndpointIds);
         }
     }
 

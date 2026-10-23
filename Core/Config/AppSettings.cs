@@ -12,6 +12,7 @@ public class AppSettings
     public bool StartWithWindows { get; set; } = false;
     public bool StartMinimized { get; set; } = false;
     public bool KeepAudioAwake { get; set; } = true;
+    public List<string> DisabledAudioKeepAliveMonitors { get; set; } = new();
     public bool ShowNotificationOnRelocate { get; set; } = true;
     public int SweepIntervalMs { get; set; } = 1000;
 }

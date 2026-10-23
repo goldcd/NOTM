@@ -127,6 +127,73 @@ public class DisplayService
             return true;
         }, IntPtr.Zero);
 
+        // Associate displays with active audio endpoints (HDMI/DP soundbars and monitors)
+        try
+        {
+            var audioEndpoints = Audio.Wasapi.GetActiveAudioEndpoints();
+            var claimedAudioIds = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+            foreach (var display in displays)
+            {
+                var match = audioEndpoints.FirstOrDefault(a =>
+                    !claimedAudioIds.Contains(a.Id) &&
+                    IsAudioEndpointMatch(display, a));
+
+                if (match != null)
+                {
+                    claimedAudioIds.Add(match.Id);
+                    display.HasAudioEndpoint = true;
+                    display.AudioEndpointId = match.Id;
+                    display.AudioEndpointName = match.FriendlyName;
+                }
+            }
+        }
+        catch
+        {
+            // Fallback gracefully if audio enumeration fails
+        }
+
         return displays;
+    }
+
+    private static bool IsAudioEndpointMatch(DisplayInfo display, Audio.Wasapi.AudioEndpointInfo endpoint)
+    {
+        if (string.IsNullOrWhiteSpace(endpoint.FriendlyName))
+            return false;
+
+        // 1. Direct friendly name match:
+        // e.g. "SOUNDSLAYER (NVIDIA High Definition Audio)" contains "SOUNDSLAYER"
+        if (!string.IsNullOrWhiteSpace(display.FriendlyName) &&
+            endpoint.FriendlyName.Contains(display.FriendlyName.Trim(), StringComparison.OrdinalIgnoreCase))
+        {
+            return true;
+        }
+
+        // 2. Base name match (prefix before '('):
+        // e.g. "AW3423DWF" from "AW3423DWF (NVIDIA High Definition Audio)"
+        int parenIdx = endpoint.FriendlyName.IndexOf('(');
+        string baseName = (parenIdx > 0 ? endpoint.FriendlyName.Substring(0, parenIdx) : endpoint.FriendlyName).Trim();
+        if (baseName.Length >= 3 && !string.IsNullOrWhiteSpace(display.FriendlyName) &&
+            display.FriendlyName.Contains(baseName, StringComparison.OrdinalIgnoreCase))
+        {
+            return true;
+        }
+
+        // 3. Hardware ID model match:
+        // e.g. "MEI4024" or "DELA212" from "MONITOR\MEI4024\..."
+        if (!string.IsNullOrWhiteSpace(display.HardwareId))
+        {
+            var parts = display.HardwareId.Split('\\');
+            if (parts.Length > 1 && parts[1].Length >= 4)
+            {
+                string model = parts[1].Trim();
+                if (endpoint.FriendlyName.Contains(model, StringComparison.OrdinalIgnoreCase))
+                {
+                    return true;
+                }
+            }
+        }
+
+        return false;
     }
 }

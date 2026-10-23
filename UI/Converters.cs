@@ -99,3 +99,26 @@ public class InverseBooleanConverter : IValueConverter
         return false;
     }
 }
+
+public class BooleanToVisibilityConverter : IValueConverter
+{
+    public static readonly BooleanToVisibilityConverter Instance = new();
+
+    public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
+    {
+        if (value is bool b && b)
+        {
+            return Visibility.Visible;
+        }
+        return Visibility.Collapsed;
+    }
+
+    public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
+    {
+        if (value is Visibility v)
+        {
+            return v == Visibility.Visible;
+        }
+        return false;
+    }
+}

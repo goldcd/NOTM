@@ -63,6 +63,24 @@ public class DisplayInfo : INotifyPropertyChanged
         }
     }
 
+    public bool HasAudioEndpoint { get; set; }
+    public string? AudioEndpointId { get; set; }
+    public string? AudioEndpointName { get; set; }
+
+    private bool _keepAudioAlive = true;
+    public bool KeepAudioAlive
+    {
+        get => _keepAudioAlive;
+        set
+        {
+            if (_keepAudioAlive != value)
+            {
+                _keepAudioAlive = value;
+                OnPropertyChanged();
+            }
+        }
+    }
+
     public string ResolutionString => $"{Width} × {Height}";
     public string PositionString => $"Position: ({Left}, {Top})";
 
@@ -70,7 +88,11 @@ public class DisplayInfo : INotifyPropertyChanged
         ? $"Display {Index} ({DeviceName})"
         : FriendlyName;
 
-    public string Subtitle => $"{ResolutionString} • {(IsOsPrimary ? "Windows Primary" : "Secondary")}";
+    public string Subtitle => $"{ResolutionString} • {(IsOsPrimary ? "Windows Primary" : "Secondary")}{(HasAudioEndpoint ? " • 🔊 Audio" : "")}";
+
+    public string AudioEndpointSubtitle => string.IsNullOrEmpty(AudioEndpointName)
+        ? "No associated audio output"
+        : $"Prevents {AudioEndpointName} from sleeping over HDMI/DP";
 
     public string StatusDescription
     {

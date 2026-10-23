@@ -66,7 +66,9 @@ For anyone interested in the implementation details:
 
 ### Audio Keep-Alive (WASAPI Engine)
 - **Problem Solved**: Digital soundbars (e.g. Panasonic SoundSlayer), AV receivers, and DACs often enter a power-saving sleep state when silent. When audio starts playing, the first 1-2 seconds get clipped or delayed while the HDMI audio clock re-syncs.
-- **Implementation**: Uses native Windows Audio Session API (`IAudioClient`) in shared mode to stream inaudible keep-alive samples (`Fluctuate` mode) with ~0% CPU. Alternates polarity (`0x34000001` / `0xB4000001` for float, `+1` / `-1` for 16-bit PCM) once per second to maintain zero DC bias while keeping the HDMI transmitter awake.
+- **Per-Device Targeting**: Rather than keeping all audio devices awake or waking headphones when you don't want them, NOTM correlates connected HDMI/DisplayPort audio endpoints with their specific physical displays. If a monitor has an associated soundbar or audio output, a dedicated **Keep Audio Alive** option appears directly on that display card (default: ON). Displays without audio outputs keep this option cleanly hidden.
+- **Power-State Aware**: When you turn off your soundbar, NOTM stops streaming to it and waits for it without ever keeping alive whatever other audio output you might be using (such as headphones or desktop speakers). When the soundbar is powered back on, NOTM resumes keeping it awake automatically.
+- **Implementation**: Uses native Windows Audio Session API (`IAudioClient`) in shared mode targeted specifically to the endpoint to stream inaudible keep-alive samples (`Fluctuate` mode) with ~0% CPU. Alternates polarity (`0x34000001` / `0xB4000001` for float, `+1` / `-1` for 16-bit PCM) once per second to maintain zero DC bias while keeping the HDMI transmitter awake.
 - **Acknowledgements & Credit**: The audio keep-alive feature and `Fluctuate` stream implementation are directly inspired by and based on the work of **VEG** in [SoundKeeper](https://github.com/vrubleg/soundkeeper).
 
 ### Build & Utility Scripts
