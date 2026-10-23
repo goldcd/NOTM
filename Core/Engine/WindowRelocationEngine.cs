@@ -200,6 +200,29 @@ public class WindowRelocationEngine : IDisposable
         Win32.GetWindowThreadProcessId(hWnd, out uint processId);
         if (processId == 0) return false;
 
+        string processName = GetProcessName(processId);
+
+        // Exclude Windows Snipping Tool, Screen Capture, Game Bar, and Shell Overlays
+        if (processName.Equals("ScreenClippingHost", StringComparison.OrdinalIgnoreCase) ||
+            processName.Equals("SnippingTool", StringComparison.OrdinalIgnoreCase) ||
+            processName.Equals("ScreenSketch", StringComparison.OrdinalIgnoreCase) ||
+            processName.Equals("QuickSnip", StringComparison.OrdinalIgnoreCase) ||
+            processName.Equals("ShareX", StringComparison.OrdinalIgnoreCase) ||
+            processName.Equals("Greenshot", StringComparison.OrdinalIgnoreCase) ||
+            processName.Equals("Lightshot", StringComparison.OrdinalIgnoreCase) ||
+            processName.Equals("ShellExperienceHost", StringComparison.OrdinalIgnoreCase) ||
+            processName.Equals("StartMenuExperienceHost", StringComparison.OrdinalIgnoreCase) ||
+            processName.Equals("SearchHost", StringComparison.OrdinalIgnoreCase) ||
+            processName.Equals("TextInputHost", StringComparison.OrdinalIgnoreCase) ||
+            processName.Equals("LockApp", StringComparison.OrdinalIgnoreCase) ||
+            processName.Equals("LogonUI", StringComparison.OrdinalIgnoreCase) ||
+            processName.Equals("GameBar", StringComparison.OrdinalIgnoreCase) ||
+            processName.Equals("GameBarFTServer", StringComparison.OrdinalIgnoreCase) ||
+            processName.Equals("Magnify", StringComparison.OrdinalIgnoreCase))
+        {
+            return false;
+        }
+
         // Requirement 2: Protect NOTM itself! Only skip identify overlay windows, NOT the NOTM main window
         if (processId == _currentProcessId)
         {
@@ -239,7 +262,8 @@ public class WindowRelocationEngine : IDisposable
         string className = classNameBuilder.ToString();
 
         if (className is "Shell_TrayWnd" or "Shell_SecondaryTrayWnd" or "WorkerW" or "Progman" or
-            "XamlExplorerHostIslandWindow" or "Windows.UI.Core.CoreWindow" or "DV2ControlHost")
+            "XamlExplorerHostIslandWindow" or "Windows.UI.Core.CoreWindow" or "DV2ControlHost" or
+            "ScreenClippingHost" or "Microsoft.Windows.SnippingTool")
         {
             return false;
         }
@@ -250,8 +274,15 @@ public class WindowRelocationEngine : IDisposable
             return false;
         }
 
-        int centerX = rect.Left + rect.Width / 2;
-        int centerY = rect.Top + rect.Height / 2;
+        // Multi-monitor virtual screen check:
+        // Screen capture overlays (Snipping Tool, ShareX, etc.) create a canvas that spans across all monitors.
+        // Never touch or relocate any window that spans the full multi-monitor virtual screen!
+        int vWidth = Win32.GetSystemMetrics(Win32.SM_CXVIRTUALSCREEN);
+        int vHeight = Win32.GetSystemMetrics(Win32.SM_CYVIRTUALSCREEN);
+        if (vWidth > 0 && vHeight > 0 && rect.Width >= vWidth * 0.90 && rect.Height >= vHeight * 0.90)
+        {
+            return false;
+        }
 
         List<DisplayInfo> activeMonitors;
         lock (_lock)
@@ -275,35 +306,40 @@ public class WindowRelocationEngine : IDisposable
 
         if (excludedMonitors.Count == 0) return false;
 
-        // Check which monitor the window is currently on
-        IntPtr hCurrentMonitor = Win32.MonitorFromWindow(hWnd, Win32.MONITOR_DEFAULTTONEAREST);
-
+        // Dominance & Overlap Check:
+        // A window is only a candidate for relocation if its presence on an excluded monitor is strictly dominant!
+        // If it's already mostly on the primary monitor, leave it alone.
+        double primaryOverlap = targetPrimary.OverlapArea(rect.Left, rect.Top, rect.Right, rect.Bottom);
+        double maxExcludedOverlap = 0;
         DisplayInfo? sourceExcludedMonitor = null;
 
-        // 1. Check if the nearest HMonitor is in our excluded list
-        sourceExcludedMonitor = excludedMonitors.FirstOrDefault(m => m.HMonitor == hCurrentMonitor);
-
-        // 2. Check if center of window is inside an excluded monitor
-        if (sourceExcludedMonitor == null)
+        foreach (var exc in excludedMonitors)
         {
-            sourceExcludedMonitor = excludedMonitors.FirstOrDefault(m => m.ContainsPoint(centerX, centerY));
+            double overlap = exc.OverlapArea(rect.Left, rect.Top, rect.Right, rect.Bottom);
+            if (overlap > maxExcludedOverlap)
+            {
+                maxExcludedOverlap = overlap;
+                sourceExcludedMonitor = exc;
+            }
         }
 
-        // 3. Check if significant overlap (>30% area) with an excluded monitor
-        if (sourceExcludedMonitor == null)
+        double windowArea = (double)rect.Width * rect.Height;
+
+        // If the window is not meaningfully on an excluded monitor (>25% area), or if it is primarily on the target primary, ignore!
+        if (sourceExcludedMonitor == null || maxExcludedOverlap <= 0 || (maxExcludedOverlap / windowArea) < 0.25 || primaryOverlap >= maxExcludedOverlap)
         {
-            double windowArea = (double)rect.Width * rect.Height;
-            if (windowArea > 0)
+            // Check fallback for windows centered entirely in an excluded display without primary overlap
+            int centerX = rect.Left + rect.Width / 2;
+            int centerY = rect.Top + rect.Height / 2;
+            var centerExcluded = excludedMonitors.FirstOrDefault(m => m.ContainsPoint(centerX, centerY));
+
+            if (centerExcluded != null && primaryOverlap <= 0)
             {
-                foreach (var exc in excludedMonitors)
-                {
-                    double overlap = exc.OverlapArea(rect.Left, rect.Top, rect.Right, rect.Bottom);
-                    if (overlap > 0 && (overlap / windowArea) > 0.30)
-                    {
-                        sourceExcludedMonitor = exc;
-                        break;
-                    }
-                }
+                sourceExcludedMonitor = centerExcluded;
+            }
+            else
+            {
+                sourceExcludedMonitor = null;
             }
         }
 
@@ -340,9 +376,8 @@ public class WindowRelocationEngine : IDisposable
             foreach (var key in expired) _recentlyRelocated.TryRemove(key, out _);
         }
 
-        // Get window title and process name for logging
+        // Get window title for logging
         string windowTitle = GetWindowTitle(hWnd);
-        string processName = GetProcessName(processId);
 
         bool isZoomed = Win32.IsZoomed(hWnd);
 
