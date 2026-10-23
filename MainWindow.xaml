@@ -6,7 +6,7 @@
         xmlns:ui="clr-namespace:NOTM.UI"
         mc:Ignorable="d"
         Title="NOTM - Not on That Monitor"
-        Icon="Assets/app.ico"
+        Icon="pack://application:,,,/Assets/app.ico"
         Height="680" Width="920"
         MinHeight="580" MinWidth="820"
         WindowStartupLocation="CenterScreen"
