@@ -63,9 +63,49 @@ public class DisplayInfo : INotifyPropertyChanged
         }
     }
 
-    public bool HasAudioEndpoint { get; set; }
-    public string? AudioEndpointId { get; set; }
-    public string? AudioEndpointName { get; set; }
+    private bool _hasAudioEndpoint;
+    public bool HasAudioEndpoint
+    {
+        get => _hasAudioEndpoint;
+        set
+        {
+            if (_hasAudioEndpoint != value)
+            {
+                _hasAudioEndpoint = value;
+                OnPropertyChanged();
+                OnPropertyChanged(nameof(Subtitle));
+            }
+        }
+    }
+
+    private string? _audioEndpointId;
+    public string? AudioEndpointId
+    {
+        get => _audioEndpointId;
+        set
+        {
+            if (_audioEndpointId != value)
+            {
+                _audioEndpointId = value;
+                OnPropertyChanged();
+            }
+        }
+    }
+
+    private string? _audioEndpointName;
+    public string? AudioEndpointName
+    {
+        get => _audioEndpointName;
+        set
+        {
+            if (_audioEndpointName != value)
+            {
+                _audioEndpointName = value;
+                OnPropertyChanged();
+                OnPropertyChanged(nameof(AudioEndpointSubtitle));
+            }
+        }
+    }
 
     private bool _keepAudioAlive = true;
     public bool KeepAudioAlive

@@ -8,12 +8,16 @@ namespace NOTM.Core.Audio;
 /// Used for zero-dependency, low-overhead audio keep-alive streaming.
 /// Inspired by SoundKeeper (https://github.com/vrubleg/soundkeeper).
 /// </summary>
-internal static class Wasapi
+public static class Wasapi
 {
     public const int eRender = 0;
     public const int eMultimedia = 1;
 
     public const int DEVICE_STATE_ACTIVE = 0x00000001;
+    public const int DEVICE_STATE_DISABLED = 0x00000002;
+    public const int DEVICE_STATE_NOTPRESENT = 0x00000004;
+    public const int DEVICE_STATE_UNPLUGGED = 0x00000008;
+    public const int DEVICE_STATEMASK_ALL = 0x0000000F;
     public const int STGM_READ = 0x00000000;
 
     public const int AUDCLNT_SHAREMODE_SHARED = 0;
@@ -27,13 +31,13 @@ internal static class Wasapi
 
     [ComImport]
     [Guid("BCDE0395-E52F-467C-8E3D-C4579291692E")]
-    internal class MMDeviceEnumeratorCom
+    public class MMDeviceEnumeratorCom
     {
     }
 
     [Guid("A95664D2-9614-4F35-A746-DE8DB63617E6")]
     [InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
-    internal interface IMMDeviceEnumerator
+    public interface IMMDeviceEnumerator
     {
         int EnumAudioEndpoints(int dataFlow, int stateMask, out IMMDeviceCollection ppDevices);
         int GetDefaultAudioEndpoint(int dataFlow, int role, out IMMDevice ppDevice);
@@ -44,7 +48,7 @@ internal static class Wasapi
 
     [Guid("0BD7A1BE-7A1A-44DB-8397-CC5392387B5E")]
     [InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
-    internal interface IMMDeviceCollection
+    public interface IMMDeviceCollection
     {
         int GetCount(out uint pcDevices);
         int Item(uint nDevice, out IMMDevice ppDevice);
@@ -52,7 +56,7 @@ internal static class Wasapi
 
     [Guid("D666063F-1587-4E43-81F1-B948E807363F")]
     [InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
-    internal interface IMMDevice
+    public interface IMMDevice
     {
         int Activate(ref Guid iid, int dwClsCtx, IntPtr pActivationParams, [MarshalAs(UnmanagedType.IUnknown)] out object ppInterface);
         int OpenPropertyStore(int stgmAccess, out IPropertyStore ppProperties);
@@ -62,7 +66,7 @@ internal static class Wasapi
 
     [Guid("886d8eeb-8cf2-4446-8d02-cdba1dbdcf99")]
     [InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
-    internal interface IPropertyStore
+    public interface IPropertyStore
     {
         int GetCount(out uint cProps);
         int GetAt(uint iProp, out IntPtr pkey);
@@ -72,14 +76,14 @@ internal static class Wasapi
     }
 
     [StructLayout(LayoutKind.Sequential)]
-    internal struct PROPERTYKEY
+    public struct PROPERTYKEY
     {
         public Guid fmtid;
         public uint pid;
     }
 
     [StructLayout(LayoutKind.Explicit)]
-    internal struct PROPVARIANT
+    public struct PROPVARIANT
     {
         [FieldOffset(0)] public ushort vt;
         [FieldOffset(8)] public IntPtr pwszVal;
@@ -88,7 +92,7 @@ internal static class Wasapi
 
     [Guid("1CB9AD4C-DBFA-4c32-B178-C2F568A703B2")]
     [InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
-    internal interface IAudioClient
+    public interface IAudioClient
     {
         int Initialize(int shareMode, int streamFlags, long hnsBufferDuration, long hnsPeriodicity, IntPtr pFormat, ref Guid audioSessionGuid);
         int GetBufferSize(out uint pNumBufferFrames);
@@ -106,7 +110,7 @@ internal static class Wasapi
 
     [Guid("F294AC80-3186-4283-9280-E0A6037F4C4B")]
     [InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
-    internal interface IAudioRenderClient
+    public interface IAudioRenderClient
     {
         int GetBuffer(uint numFramesRequested, out IntPtr ppData);
         int ReleaseBuffer(uint numFramesWritten, int dwFlags);
@@ -118,18 +122,23 @@ internal static class Wasapi
     [DllImport("ole32.dll")]
     public static extern int PropVariantClear(ref PROPVARIANT pvar);
 
-    public record AudioEndpointInfo(string Id, string FriendlyName);
+    public record AudioEndpointInfo(string Id, string FriendlyName, int State = 1);
 
     /// <summary>
-    /// Enumerates all currently active audio render endpoints in Windows.
+    /// Enumerates all audio render endpoints in Windows, including active and standby HDMI endpoints.
+    /// Combines COM IMMDeviceEnumerator with registry verification so standby HDMI devices
+    /// (such as soundbars that have entered sleep mode) are reliably discovered.
     /// </summary>
     public static System.Collections.Generic.List<AudioEndpointInfo> GetActiveAudioEndpoints()
     {
         var list = new System.Collections.Generic.List<AudioEndpointInfo>();
+        var seenIds = new System.Collections.Generic.HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+        // 1. Enumerate via IMMDeviceEnumerator
         try
         {
             var enumerator = (IMMDeviceEnumerator)new MMDeviceEnumeratorCom();
-            int hr = enumerator.EnumAudioEndpoints(eRender, DEVICE_STATE_ACTIVE, out IMMDeviceCollection coll);
+            int hr = enumerator.EnumAudioEndpoints(eRender, DEVICE_STATEMASK_ALL, out IMMDeviceCollection coll);
             if (hr == 0 && coll != null)
             {
                 coll.GetCount(out uint count);
@@ -137,6 +146,16 @@ internal static class Wasapi
                 {
                     fmtid = new Guid("a45c254e-df1c-4efd-8020-67d146a850e0"),
                     pid = 14
+                };
+                var pkeyDeviceDesc = new PROPERTYKEY
+                {
+                    fmtid = new Guid("a45c254e-df1c-4efd-8020-67d146a850e0"),
+                    pid = 2
+                };
+                var pkeyInterfaceFriendly = new PROPERTYKEY
+                {
+                    fmtid = new Guid("b3f8fa53-0004-438e-9003-51a46e139bfc"),
+                    pid = 6
                 };
 
                 for (uint i = 0; i < count; i++)
@@ -146,18 +165,40 @@ internal static class Wasapi
                         try
                         {
                             dev.GetId(out string id);
+                            dev.GetState(out int state);
                             string friendlyName = string.Empty;
+                            string deviceDesc = string.Empty;
+                            string interfaceDesc = string.Empty;
+
                             if (dev.OpenPropertyStore(STGM_READ, out IPropertyStore store) == 0 && store != null)
                             {
                                 try
                                 {
-                                    if (store.GetValue(ref pkeyFriendlyName, out PROPVARIANT pv) == 0)
+                                    if (store.GetValue(ref pkeyFriendlyName, out PROPVARIANT pv14) == 0)
                                     {
-                                        if (pv.vt == 31 && pv.pwszVal != IntPtr.Zero) // VT_LPWSTR
+                                        if (pv14.vt == 31 && pv14.pwszVal != IntPtr.Zero)
                                         {
-                                            friendlyName = Marshal.PtrToStringUni(pv.pwszVal) ?? string.Empty;
+                                            friendlyName = Marshal.PtrToStringUni(pv14.pwszVal) ?? string.Empty;
                                         }
-                                        PropVariantClear(ref pv);
+                                        PropVariantClear(ref pv14);
+                                    }
+
+                                    if (store.GetValue(ref pkeyDeviceDesc, out PROPVARIANT pv2) == 0)
+                                    {
+                                        if (pv2.vt == 31 && pv2.pwszVal != IntPtr.Zero)
+                                        {
+                                            deviceDesc = Marshal.PtrToStringUni(pv2.pwszVal) ?? string.Empty;
+                                        }
+                                        PropVariantClear(ref pv2);
+                                    }
+
+                                    if (store.GetValue(ref pkeyInterfaceFriendly, out PROPVARIANT pv6) == 0)
+                                    {
+                                        if (pv6.vt == 31 && pv6.pwszVal != IntPtr.Zero)
+                                        {
+                                            interfaceDesc = Marshal.PtrToStringUni(pv6.pwszVal) ?? string.Empty;
+                                        }
+                                        PropVariantClear(ref pv6);
                                     }
                                 }
                                 finally
@@ -166,9 +207,16 @@ internal static class Wasapi
                                 }
                             }
 
-                            if (!string.IsNullOrEmpty(id) && !string.IsNullOrEmpty(friendlyName))
+                            string effectiveName = !string.IsNullOrWhiteSpace(friendlyName)
+                                ? friendlyName
+                                : (!string.IsNullOrWhiteSpace(deviceDesc)
+                                    ? (!string.IsNullOrWhiteSpace(interfaceDesc) ? $"{deviceDesc} ({interfaceDesc})" : deviceDesc)
+                                    : string.Empty);
+
+                            if (!string.IsNullOrEmpty(id) && !string.IsNullOrEmpty(effectiveName) && !seenIds.Contains(id))
                             {
-                                list.Add(new AudioEndpointInfo(id, friendlyName));
+                                seenIds.Add(id);
+                                list.Add(new AudioEndpointInfo(id, effectiveName, state));
                             }
                         }
                         finally
@@ -184,6 +232,49 @@ internal static class Wasapi
         {
             // Fallback gracefully on systems with restricted audio service
         }
-        return list;
+
+        // 2. Supplement with registry enumeration of MMDevices\Audio\Render
+        // (Guarantees standby HDMI devices like SoundSlayer or monitors are discovered even if asleep)
+        try
+        {
+            using var renderKey = Microsoft.Win32.Registry.LocalMachine.OpenSubKey(@"SOFTWARE\Microsoft\Windows\CurrentVersion\MMDevices\Audio\Render");
+            if (renderKey != null)
+            {
+                foreach (var subKeyName in renderKey.GetSubKeyNames())
+                {
+                    string id = $"{{0.0.0.00000000}}.{subKeyName}";
+                    if (seenIds.Contains(id)) continue;
+
+                    using var devKey = renderKey.OpenSubKey(subKeyName);
+                    using var propsKey = renderKey.OpenSubKey($@"{subKeyName}\Properties");
+                    if (devKey != null && propsKey != null)
+                    {
+                        int state = (int)(devKey.GetValue("DeviceState") ?? 0);
+                        string p14 = propsKey.GetValue("{a45c254e-df1c-4efd-8020-67d146a850e0},14") as string ?? string.Empty;
+                        string p2 = propsKey.GetValue("{a45c254e-df1c-4efd-8020-67d146a850e0},2") as string ?? string.Empty;
+                        string p6 = propsKey.GetValue("{b3f8fa53-0004-438e-9003-51a46e139bfc},6") as string ?? string.Empty;
+
+                        string effectiveName = !string.IsNullOrWhiteSpace(p14)
+                            ? p14
+                            : (!string.IsNullOrWhiteSpace(p2)
+                                ? (!string.IsNullOrWhiteSpace(p6) ? $"{p2} ({p6})" : p2)
+                                : string.Empty);
+
+                        if (!string.IsNullOrWhiteSpace(effectiveName))
+                        {
+                            seenIds.Add(id);
+                            list.Add(new AudioEndpointInfo(id, effectiveName, state));
+                        }
+                    }
+                }
+            }
+        }
+        catch
+        {
+            // Registry fallback ignored if inaccessible
+        }
+
+        // Order active endpoints (DEVICE_STATE_ACTIVE = 1) first
+        return System.Linq.Enumerable.ToList(System.Linq.Enumerable.OrderBy(list, e => e.State == DEVICE_STATE_ACTIVE ? 0 : 1));
     }
 }
