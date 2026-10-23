@@ -48,4 +48,25 @@ public static class StartupService
             // Ignore registry permissions error
         }
     }
+
+    private const string UninstallRegistryKey = @"Software\Microsoft\Windows\CurrentVersion\Uninstall\NOTM";
+
+    public static void SyncInstalledAppVersion()
+    {
+        try
+        {
+            using var key = Registry.CurrentUser.OpenSubKey(UninstallRegistryKey, true);
+            if (key == null) return;
+
+            var v = typeof(StartupService).Assembly.GetName().Version;
+            if (v == null) return;
+
+            string versionStr = $"{v.Major}.{v.Minor}.{v.Build}";
+            key.SetValue("DisplayVersion", versionStr);
+        }
+        catch
+        {
+            // Ignore registry permissions or missing key
+        }
+    }
 }

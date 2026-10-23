@@ -5,6 +5,7 @@ using System.Windows;
 using NOTM.Core.Audio;
 using NOTM.Core.Config;
 using NOTM.Core.Engine;
+using NOTM.Core.Startup;
 using NOTM.Core.Tray;
 using NOTM.UI;
 
@@ -24,6 +25,9 @@ public partial class App : Application
     protected override void OnStartup(StartupEventArgs e)
     {
         base.OnStartup(e);
+
+        // Keep Windows uninstaller registration version synced with current running app
+        StartupService.SyncInstalledAppVersion();
 
         // Check single-instance mutex
         _singleInstanceMutex = new Mutex(true, MutexName, out bool isNewInstance);

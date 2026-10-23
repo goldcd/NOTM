@@ -6,6 +6,7 @@ using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text;
 using System.Timers;
+using Microsoft.Win32;
 using NOTM.Core.Display;
 using NOTM.Core.Native;
 using NOTM.Models;
@@ -29,6 +30,8 @@ public class WindowRelocationEngine : IDisposable
     private List<DisplayInfo> _monitors = new();
     private bool _isGuardEnabled = true;
     private int _sweepIntervalMs = 1000;
+    private volatile bool _isSessionLocked;
+    private bool _isSessionHooked;
 
     public event Action<RelocationLogItem>? OnWindowRelocated;
 
@@ -44,6 +47,12 @@ public class WindowRelocationEngine : IDisposable
             Stop();
 
             _winEventDelegate = HookCallback;
+
+            if (!_isSessionHooked)
+            {
+                SystemEvents.SessionSwitch += HandleSessionSwitch;
+                _isSessionHooked = true;
+            }
 
             // 1. Hook window drag/resize completion (mouse drop event)
             IntPtr hookMoveEnd = Win32.SetWinEventHook(
@@ -112,6 +121,12 @@ public class WindowRelocationEngine : IDisposable
                 _sweepTimer = null;
             }
 
+            if (_isSessionHooked)
+            {
+                SystemEvents.SessionSwitch -= HandleSessionSwitch;
+                _isSessionHooked = false;
+            }
+
             foreach (var hook in _hookHandles)
             {
                 if (hook != IntPtr.Zero)
@@ -121,6 +136,27 @@ public class WindowRelocationEngine : IDisposable
             }
             _hookHandles.Clear();
             _winEventDelegate = null;
+        }
+    }
+
+    private void HandleSessionSwitch(object sender, SessionSwitchEventArgs e)
+    {
+        if (e.Reason == SessionSwitchReason.SessionLock)
+        {
+            _isSessionLocked = true;
+        }
+        else if (e.Reason == SessionSwitchReason.SessionUnlock)
+        {
+            _isSessionLocked = false;
+            // Allow Windows a moment to tear down its lock UI before sweeping
+            _ = Task.Run(async () =>
+            {
+                await Task.Delay(1000);
+                if (!_isSessionLocked && _isGuardEnabled)
+                {
+                    SweepAllWindows();
+                }
+            });
         }
     }
 
@@ -144,7 +180,7 @@ public class WindowRelocationEngine : IDisposable
 
     public void SweepAllWindows()
     {
-        if (!_isGuardEnabled) return;
+        if (!_isGuardEnabled || _isSessionLocked || Win32.IsWorkstationLocked()) return;
 
         Win32.EnumWindows((hWnd, lParam) =>
         {
@@ -162,7 +198,7 @@ public class WindowRelocationEngine : IDisposable
         uint dwEventThread,
         uint dwmsEventTime)
     {
-        if (!_isGuardEnabled || hwnd == IntPtr.Zero) return;
+        if (!_isGuardEnabled || hwnd == IntPtr.Zero || _isSessionLocked || Win32.IsWorkstationLocked()) return;
 
         // idObject: 0 = OBJID_WINDOW
         if (idObject != 0) return;
@@ -179,7 +215,7 @@ public class WindowRelocationEngine : IDisposable
 
     public bool CheckAndRelocateWindow(IntPtr hWnd)
     {
-        if (!_isGuardEnabled || hWnd == IntPtr.Zero) return false;
+        if (!_isGuardEnabled || hWnd == IntPtr.Zero || _isSessionLocked || Win32.IsWorkstationLocked()) return false;
 
         // Debounce: don't process the same window repeatedly within 350ms
         if (_recentlyRelocated.TryGetValue(hWnd, out var lastTime))
@@ -215,7 +251,10 @@ public class WindowRelocationEngine : IDisposable
             processName.Equals("SearchHost", StringComparison.OrdinalIgnoreCase) ||
             processName.Equals("TextInputHost", StringComparison.OrdinalIgnoreCase) ||
             processName.Equals("LockApp", StringComparison.OrdinalIgnoreCase) ||
+            processName.Equals("WindowsInternal.ComposableShell.Experiences.Lockapp", StringComparison.OrdinalIgnoreCase) ||
             processName.Equals("LogonUI", StringComparison.OrdinalIgnoreCase) ||
+            processName.Equals("CredentialUIBroker", StringComparison.OrdinalIgnoreCase) ||
+            processName.Equals("ShellHost", StringComparison.OrdinalIgnoreCase) ||
             processName.Equals("GameBar", StringComparison.OrdinalIgnoreCase) ||
             processName.Equals("GameBarFTServer", StringComparison.OrdinalIgnoreCase) ||
             processName.Equals("Magnify", StringComparison.OrdinalIgnoreCase))

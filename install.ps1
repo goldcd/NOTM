@@ -139,8 +139,21 @@ if (-not (Test-Path $uninstallRegKey)) {
     New-Item -Path $uninstallRegKey -Force | Out-Null
 }
 
+# Extract actual version from installed executable
+$appVersion = "1.0.0"
+if (Test-Path $targetExe) {
+    try {
+        $rawVer = (Get-Item $targetExe).VersionInfo.ProductVersion
+        if (-not $rawVer) { $rawVer = (Get-Item $targetExe).VersionInfo.FileVersion }
+        if ($rawVer) {
+            $cleanVer = $rawVer.Split('+')[0].Trim().TrimStart('v', 'V')
+            if ($cleanVer) { $appVersion = $cleanVer }
+        }
+    } catch { }
+}
+
 Set-ItemProperty -Path $uninstallRegKey -Name "DisplayName" -Value "NOTM - Not on That Monitor"
-Set-ItemProperty -Path $uninstallRegKey -Name "DisplayVersion" -Value "1.0.0"
+Set-ItemProperty -Path $uninstallRegKey -Name "DisplayVersion" -Value $appVersion
 Set-ItemProperty -Path $uninstallRegKey -Name "Publisher" -Value "goldcd"
 Set-ItemProperty -Path $uninstallRegKey -Name "DisplayIcon" -Value $targetExe
 Set-ItemProperty -Path $uninstallRegKey -Name "InstallLocation" -Value $installDir

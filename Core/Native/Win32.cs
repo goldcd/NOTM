@@ -221,6 +221,26 @@ public static class Win32
     [DllImport("user32.dll")]
     public static extern IntPtr GetForegroundWindow();
 
+    public const uint DESKTOP_READOBJECTS = 0x0001;
+
+    [DllImport("user32.dll", SetLastError = true)]
+    public static extern IntPtr OpenInputDesktop(uint dwFlags, [MarshalAs(UnmanagedType.Bool)] bool fInherit, uint dwDesiredAccess);
+
+    [DllImport("user32.dll", SetLastError = true)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    public static extern bool CloseDesktop(IntPtr hDesktop);
+
+    public static bool IsWorkstationLocked()
+    {
+        IntPtr hDesktop = OpenInputDesktop(0, false, DESKTOP_READOBJECTS);
+        if (hDesktop == IntPtr.Zero)
+        {
+            return true;
+        }
+        CloseDesktop(hDesktop);
+        return false;
+    }
+
     public static bool GetWindowActualRect(IntPtr hWnd, out RECT rect)
     {
         // Try to get DWM extended frame bounds (accurate on Windows 10/11 with shadows)
