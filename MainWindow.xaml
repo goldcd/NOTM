@@ -6,22 +6,24 @@
         xmlns:ui="clr-namespace:NOTM.UI"
         mc:Ignorable="d"
         Title="NOTM - Monitor Guard"
-        Height="800" Width="960"
-        MinHeight="650" MinWidth="850"
+        Height="570" Width="890"
+        MinHeight="520" MinWidth="800"
         WindowStartupLocation="CenterScreen"
-        Background="#121214"
+        Background="#121215"
         Foreground="#EDEDED"
-        FontFamily="Segoe UI, Inter, Roboto, Arial">
+        FontFamily="Segoe UI, Inter, Roboto, Arial"
+        UseLayoutRounding="True"
+        SnapsToDevicePixels="True">
 
     <Window.Resources>
         <!-- Modern Button Styles -->
         <Style x:Key="ActionButtonStyle" TargetType="Button">
-            <Setter Property="Background" Value="#27272A"/>
+            <Setter Property="Background" Value="#26262B"/>
             <Setter Property="Foreground" Value="#EDEDED"/>
             <Setter Property="BorderBrush" Value="#3F3F46"/>
             <Setter Property="BorderThickness" Value="1"/>
-            <Setter Property="Padding" Value="14,8"/>
-            <Setter Property="FontSize" Value="13"/>
+            <Setter Property="Padding" Value="14,7"/>
+            <Setter Property="FontSize" Value="12.5"/>
             <Setter Property="FontWeight" Value="SemiBold"/>
             <Setter Property="Cursor" Value="Hand"/>
             <Setter Property="Template">
@@ -37,14 +39,14 @@
                         </Border>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="btnBorder" Property="Background" Value="#3F3F46"/>
+                                <Setter TargetName="btnBorder" Property="Background" Value="#3B3B42"/>
                                 <Setter TargetName="btnBorder" Property="BorderBrush" Value="#71717A"/>
                             </Trigger>
                             <Trigger Property="IsPressed" Value="True">
-                                <Setter TargetName="btnBorder" Property="Background" Value="#202024"/>
+                                <Setter TargetName="btnBorder" Property="Background" Value="#1E1E22"/>
                             </Trigger>
                             <Trigger Property="IsEnabled" Value="False">
-                                <Setter TargetName="btnBorder" Property="Opacity" Value="0.45"/>
+                                <Setter TargetName="btnBorder" Property="Opacity" Value="0.4"/>
                             </Trigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
@@ -71,6 +73,9 @@
                             <Trigger Property="IsMouseOver" Value="True">
                                 <Setter TargetName="btnBorder" Property="Background" Value="#1D4ED8"/>
                                 <Setter TargetName="btnBorder" Property="BorderBrush" Value="#60A5FA"/>
+                            </Trigger>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter TargetName="btnBorder" Property="Opacity" Value="0.4"/>
                             </Trigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
@@ -133,71 +138,91 @@
         </Style>
     </Window.Resources>
 
-    <Grid Margin="24,20,24,20">
+    <Grid Margin="20,16,20,16">
         <Grid.RowDefinitions>
-            <!-- 0: Header -->
+            <!-- 0: Minimalist Top Bar (Settings + Master Toggle) -->
             <RowDefinition Height="Auto"/>
-            <!-- 1: Windows Display Settings Layout Preview -->
-            <RowDefinition Height="Auto"/>
-            <!-- 2: Selected Monitor Settings Card -->
-            <RowDefinition Height="Auto"/>
-            <!-- 3: Lower Section (Logs + System Options) -->
+            <!-- 1: Windows 11 Display Settings Preview -->
             <RowDefinition Height="*"/>
+            <!-- 2: Selected Display Configuration Card -->
+            <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
 
-        <!-- ================= 0: HEADER ================= -->
-        <Border Grid.Row="0" Margin="0,0,0,16" Padding="0,0,0,14" BorderBrush="#27272A" BorderThickness="0,0,0,1">
+        <!-- ================= 0: MINIMALIST TOP BAR ================= -->
+        <Border Grid.Row="0" Margin="0,0,0,14" Padding="0,0,0,12" BorderBrush="#26262B" BorderThickness="0,0,0,1">
             <Grid>
                 <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="*"/>
                     <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="*"/>
                 </Grid.ColumnDefinitions>
 
-                <!-- Left: App Brand & Guard State -->
+                <!-- Left: App Brand & Status -->
                 <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
-                    <Border Width="38" Height="38" CornerRadius="10" Background="#2563EB" Margin="0,0,14,0">
-                        <TextBlock Text="🛡" FontSize="19" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                    <Border Width="34" Height="34" CornerRadius="8" Background="#2563EB" Margin="0,0,10,0">
+                        <TextBlock Text="🛡" FontSize="17" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                     </Border>
                     <StackPanel VerticalAlignment="Center">
                         <StackPanel Orientation="Horizontal">
-                            <TextBlock Text="NOTM" FontSize="22" FontWeight="Bold" Foreground="White" Margin="0,0,10,0"/>
-                            <!-- Guard Status Pill -->
+                            <TextBlock Text="NOTM" FontSize="19" FontWeight="Bold" Foreground="White" Margin="0,0,8,0"/>
+                            <!-- Status Badge -->
                             <Border Background="{Binding StatusBrush, FallbackValue=#10B981}"
-                                    CornerRadius="12"
-                                    Padding="10,3"
+                                    CornerRadius="10"
+                                    Padding="8,2"
                                     VerticalAlignment="Center">
                                 <StackPanel Orientation="Horizontal">
-                                    <Ellipse Width="7" Height="7" Fill="White" Margin="0,0,6,0"/>
+                                    <Ellipse Width="6" Height="6" Fill="White" Margin="0,0,5,0"/>
                                     <TextBlock Text="{Binding StatusText, FallbackValue='GUARD ACTIVE'}"
-                                               FontSize="11"
+                                               FontSize="10"
                                                FontWeight="Bold"
                                                Foreground="White"/>
                                 </StackPanel>
                             </Border>
                         </StackPanel>
-                        <TextBlock Text="Display Guard • Restricts application usage without detaching monitors"
-                                   FontSize="12" Foreground="#A1A1AA" Margin="0,2,0,0"/>
+                        <TextBlock Text="Display Guard" FontSize="11" Foreground="#71717A"/>
                     </StackPanel>
                 </StackPanel>
 
-                <!-- Right: Header Quick Controls -->
-                <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
-                    <Button Content="⚡ Relocate Windows"
+                <!-- Right: Settings & Master Toggle (All in Top Bar as requested) -->
+                <StackPanel Grid.Column="1" Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
+                    <!-- Start with Windows -->
+                    <CheckBox Content="Start with Windows"
+                              IsChecked="{Binding StartWithWindows}"
+                              Foreground="#A1A1AA"
+                              FontSize="12"
+                              Margin="0,0,14,0"
+                              VerticalAlignment="Center"
+                              Cursor="Hand"/>
+
+                    <!-- Start Minimized -->
+                    <CheckBox Content="Start Minimized"
+                              IsChecked="{Binding StartMinimized}"
+                              Foreground="#A1A1AA"
+                              FontSize="12"
+                              Margin="0,0,14,0"
+                              VerticalAlignment="Center"
+                              Cursor="Hand"/>
+
+                    <!-- Notifications -->
+                    <CheckBox Content="Notifications"
+                              IsChecked="{Binding ShowNotifications}"
+                              Foreground="#A1A1AA"
+                              FontSize="12"
+                              Margin="0,0,14,0"
+                              VerticalAlignment="Center"
+                              Cursor="Hand"/>
+
+                    <!-- Sweep Button -->
+                    <Button Content="⚡ Sweep"
                             Style="{StaticResource ActionButtonStyle}"
                             Click="OnSweepClicked"
-                            Margin="0,0,8,0"
+                            Padding="10,5"
+                            Margin="0,0,12,0"
                             ToolTip="Instantly move any off-limits window back to primary display"/>
 
-                    <Button Content="🔄 Refresh Displays"
-                            Style="{StaticResource ActionButtonStyle}"
-                            Click="OnRefreshClicked"
-                            Margin="0,0,12,0"
-                            ToolTip="Scan for connected display changes"/>
-
                     <!-- Guard Master Toggle -->
-                    <Border Background="#27272A" CornerRadius="8" Padding="12,6" BorderBrush="#3F3F46" BorderThickness="1">
+                    <Border Background="#202024" CornerRadius="8" Padding="10,5" BorderBrush="#333338" BorderThickness="1">
                         <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                            <TextBlock Text="Guard Status:" FontSize="13" Foreground="#A1A1AA" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                            <TextBlock Text="Guard:" FontSize="12" Foreground="#A1A1AA" VerticalAlignment="Center" Margin="0,0,8,0"/>
                             <CheckBox IsChecked="{Binding IsGuardActive}"
                                       VerticalAlignment="Center"
                                       Cursor="Hand"/>
@@ -209,51 +234,47 @@
 
         <!-- ================= 1: WINDOWS 11 "SYSTEM > DISPLAY" TOPOLOGY ================= -->
         <Border Grid.Row="1"
-                Background="#18181B"
-                BorderBrush="#27272A"
+                Background="#18181C"
+                BorderBrush="#26262B"
                 BorderThickness="1"
-                CornerRadius="14"
-                Padding="18,14"
-                Margin="0,0,0,16">
+                CornerRadius="12"
+                Padding="16,12"
+                Margin="0,0,0,14">
             <Grid>
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto"/>
-                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
                     <RowDefinition Height="Auto"/>
                 </Grid.RowDefinitions>
 
-                <!-- Section Header -->
-                <Grid Grid.Row="0" Margin="0,0,0,10">
+                <!-- Header -->
+                <Grid Grid.Row="0" Margin="0,0,0,8">
                     <StackPanel Orientation="Horizontal">
-                        <TextBlock Text="Displays" FontSize="16" FontWeight="SemiBold" Foreground="White" Margin="0,0,8,0"/>
+                        <TextBlock Text="Displays" FontSize="15" FontWeight="SemiBold" Foreground="White" Margin="0,0,8,0"/>
                         <TextBlock Text="• Select a display below to configure its role" FontSize="12" Foreground="#71717A" VerticalAlignment="Center"/>
                     </StackPanel>
-                    <TextBlock Text="{Binding Displays.Count, StringFormat='{}{0} Connected'}"
-                               HorizontalAlignment="Right"
-                               FontSize="12"
-                               Foreground="#A1A1AA"/>
                 </Grid>
 
                 <!-- Interactive Display Topology Canvas -->
                 <ui:MonitorVisualMap x:Name="MonitorMap"
                                      Grid.Row="1"
-                                     Height="150"
+                                     MinHeight="180"
                                      DisplaysSource="{Binding Displays}"
                                      SelectedDisplay="{Binding SelectedDisplay, Mode=TwoWay}"
-                                     Margin="0,0,0,12"/>
+                                     Margin="0,0,0,10"/>
 
-                <!-- Action Row underneath Canvas (Identify Displays Button, exactly like Windows 11 Settings) -->
+                <!-- Action Row underneath Canvas -->
                 <Grid Grid.Row="2">
                     <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
                         <Button Content="👁 Identify Displays"
                                 Style="{StaticResource PrimaryButtonStyle}"
-                                Padding="14,7"
+                                Padding="12,6"
                                 Margin="0,0,12,0"
                                 Click="OnIdentifyAllClicked"
                                 ToolTip="Flash large display numbers onto all connected monitors"/>
 
-                        <TextBlock Text="Numbers shown on screen correspond to the boxes above."
-                                   FontSize="12"
+                        <TextBlock Text="Numbers shown on screen correspond to the display boxes above."
+                                   FontSize="11.5"
                                    Foreground="#71717A"
                                    VerticalAlignment="Center"/>
                     </StackPanel>
@@ -263,12 +284,11 @@
 
         <!-- ================= 2: SELECTED DISPLAY CONFIGURATION CARD ================= -->
         <Border Grid.Row="2"
-                Background="#18181B"
-                BorderBrush="{Binding SelectedDisplay.StatusBadgeBackground, FallbackValue=#27272A}"
+                Background="#18181C"
+                BorderBrush="{Binding SelectedDisplay.StatusBadgeBackground, FallbackValue=#26262B}"
                 BorderThickness="1.5"
-                CornerRadius="14"
-                Padding="18,14"
-                Margin="0,0,0,16">
+                CornerRadius="12"
+                Padding="16,12">
             <Grid>
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto"/>
@@ -276,23 +296,23 @@
                 </Grid.RowDefinitions>
 
                 <!-- Display Title & Specs Header -->
-                <Grid Grid.Row="0" Margin="0,0,0,12">
+                <Grid Grid.Row="0" Margin="0,0,0,10">
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="Auto"/>
                         <ColumnDefinition Width="*"/>
                         <ColumnDefinition Width="Auto"/>
                     </Grid.ColumnDefinitions>
 
-                    <!-- Selected Monitor Big Index Badge -->
+                    <!-- Selected Monitor Index Badge -->
                     <Border Grid.Column="0"
-                            Width="40" Height="40"
-                            CornerRadius="20"
+                            Width="32" Height="32"
+                            CornerRadius="8"
                             Background="{Binding SelectedDisplay.StatusBadgeBackground, FallbackValue=#2563EB}"
-                            Margin="0,0,14,0"
+                            Margin="0,0,10,0"
                             VerticalAlignment="Center">
                         <TextBlock Text="{Binding SelectedDisplay.Index, FallbackValue='1'}"
                                    FontWeight="Bold"
-                                   FontSize="18"
+                                   FontSize="15"
                                    Foreground="White"
                                    HorizontalAlignment="Center"
                                    VerticalAlignment="Center"/>
@@ -301,46 +321,48 @@
                     <StackPanel Grid.Column="1" VerticalAlignment="Center">
                         <StackPanel Orientation="Horizontal">
                             <TextBlock Text="{Binding SelectedDisplay.DisplayTitle, FallbackValue='Select a display'}"
-                                       FontSize="17"
+                                       FontSize="15"
                                        FontWeight="Bold"
                                        Foreground="White"
                                        Margin="0,0,10,0"/>
                             <!-- Status Badge -->
                             <Border Background="{Binding SelectedDisplay.StatusBadgeBackground, FallbackValue=#3F3F46}"
                                     CornerRadius="6"
-                                    Padding="8,2"
+                                    Padding="7,2"
                                     VerticalAlignment="Center">
                                 <TextBlock Text="{Binding SelectedDisplay.StatusDescription, FallbackValue='ALLOWED'}"
-                                           FontSize="11"
+                                           FontSize="10"
                                            FontWeight="Bold"
                                            Foreground="White"/>
                             </Border>
                         </StackPanel>
                         <TextBlock Text="{Binding SelectedDisplay.Subtitle, FallbackValue=''}"
-                                   FontSize="12"
+                                   FontSize="11.5"
                                    Foreground="#A1A1AA"
-                                   Margin="0,2,0,0"/>
+                                   Margin="0,1,0,0"/>
                     </StackPanel>
 
                     <!-- Identify Single Display Button -->
                     <Button Grid.Column="2"
-                            Content="Identify This Display"
+                            Content="Identify This Screen"
                             Style="{StaticResource ActionButtonStyle}"
+                            Padding="10,5"
+                            FontSize="12"
                             Click="OnIdentifySelectedClicked"
                             VerticalAlignment="Center"/>
                 </Grid>
 
                 <!-- Option Rows for Selected Display -->
-                <Border Grid.Row="1" Background="#202024" BorderBrush="#2C2C32" BorderThickness="1" CornerRadius="10" Padding="14,10">
+                <Border Grid.Row="1" Background="#202024" BorderBrush="#2A2A30" BorderThickness="1" CornerRadius="9" Padding="12,8">
                     <Grid>
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="*"/>
-                            <ColumnDefinition Width="16"/>
+                            <ColumnDefinition Width="12"/>
                             <ColumnDefinition Width="*"/>
                         </Grid.ColumnDefinitions>
 
                         <!-- Primary Target Option -->
-                        <Border Grid.Column="0" Background="#27272A" CornerRadius="8" Padding="14,10">
+                        <Border Grid.Column="0" Background="#26262B" CornerRadius="8" Padding="12,8">
                             <Grid>
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="*"/>
@@ -348,8 +370,8 @@
                                 </Grid.ColumnDefinitions>
 
                                 <StackPanel Grid.Column="0" VerticalAlignment="Center">
-                                    <TextBlock Text="Primary Target Display" FontSize="14" FontWeight="SemiBold" Foreground="White"/>
-                                    <TextBlock Text="All windows redirected from blocked monitors are sent here."
+                                    <TextBlock Text="Primary Target Display" FontSize="13" FontWeight="SemiBold" Foreground="White"/>
+                                    <TextBlock Text="All windows from blocked monitors will be redirected here."
                                                FontSize="11" Foreground="#A1A1AA" TextWrapping="Wrap" Margin="0,2,0,0"/>
                                 </StackPanel>
 
@@ -363,7 +385,7 @@
                         </Border>
 
                         <!-- Block/Allow Toggle Option -->
-                        <Border Grid.Column="2" Background="#27272A" CornerRadius="8" Padding="14,10">
+                        <Border Grid.Column="2" Background="#26262B" CornerRadius="8" Padding="12,8">
                             <Grid>
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="*"/>
@@ -371,8 +393,8 @@
                                 </Grid.ColumnDefinitions>
 
                                 <StackPanel Grid.Column="0" VerticalAlignment="Center">
-                                    <TextBlock Text="Block Display (Not in Use)" FontSize="14" FontWeight="SemiBold" Foreground="White"/>
-                                    <TextBlock Text="Prevent any window from opening or staying on this screen."
+                                    <TextBlock Text="Block Display (Not in Use)" FontSize="13" FontWeight="SemiBold" Foreground="White"/>
+                                    <TextBlock Text="Prevent any application from using this screen (audio remains active)."
                                                FontSize="11" Foreground="#A1A1AA" TextWrapping="Wrap" Margin="0,2,0,0"/>
                                 </StackPanel>
 
@@ -387,165 +409,5 @@
                 </Border>
             </Grid>
         </Border>
-
-        <!-- ================= 3: LOWER SECTION (ACTIVITY FEED & APP OPTIONS) ================= -->
-        <Grid Grid.Row="3">
-            <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="1.1*"/>
-                <ColumnDefinition Width="16"/>
-                <ColumnDefinition Width="0.9*"/>
-            </Grid.ColumnDefinitions>
-
-            <!-- Activity Log -->
-            <Border Grid.Column="0"
-                    Background="#18181B"
-                    BorderBrush="#27272A"
-                    BorderThickness="1"
-                    CornerRadius="14"
-                    Padding="16">
-                <Grid>
-                    <Grid.RowDefinitions>
-                        <RowDefinition Height="Auto"/>
-                        <RowDefinition Height="*"/>
-                    </Grid.RowDefinitions>
-
-                    <Grid Grid.Row="0" Margin="0,0,0,10">
-                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                            <TextBlock Text="Window Relocation Feed" FontSize="14" FontWeight="SemiBold" Foreground="White" Margin="0,0,8,0"/>
-                            <Border Background="#2563EB" CornerRadius="10" Padding="8,2">
-                                <TextBlock Text="{Binding RelocatedCount, StringFormat='{}{0} Redirected'}" FontSize="11" FontWeight="Bold" Foreground="White"/>
-                            </Border>
-                        </StackPanel>
-                        <Button Content="Clear"
-                                Style="{StaticResource ActionButtonStyle}"
-                                Padding="8,3"
-                                FontSize="11"
-                                HorizontalAlignment="Right"
-                                Click="OnClearLogClicked"/>
-                    </Grid>
-
-                    <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
-                        <StackPanel>
-                            <TextBlock Text="No windows relocated yet. When an app enters a blocked monitor, it will appear here."
-                                       Foreground="#71717A"
-                                       FontSize="12"
-                                       TextWrapping="Wrap"
-                                       HorizontalAlignment="Center"
-                                       Margin="0,25,0,0"
-                                       Visibility="{Binding RelocationLog.Count, Converter={x:Static ui:ZeroCountToVisibilityConverter.Instance}}"/>
-
-                            <ItemsControl ItemsSource="{Binding RelocationLog}">
-                                <ItemsControl.ItemTemplate>
-                                    <DataTemplate>
-                                        <Border Background="#202024"
-                                                BorderBrush="#2E2E33"
-                                                BorderThickness="1"
-                                                CornerRadius="8"
-                                                Padding="10,8"
-                                                Margin="0,0,0,6">
-                                            <Grid>
-                                                <Grid.RowDefinitions>
-                                                    <RowDefinition Height="Auto"/>
-                                                    <RowDefinition Height="Auto"/>
-                                                </Grid.RowDefinitions>
-
-                                                <!-- Top: Process Name & Timestamp -->
-                                                <Grid Grid.Row="0">
-                                                    <StackPanel Orientation="Horizontal">
-                                                        <Border Background="#1D4ED8" CornerRadius="4" Padding="6,2" Margin="0,0,6,0">
-                                                            <TextBlock Text="{Binding ProcessName}" FontSize="11" FontWeight="Bold" Foreground="White"/>
-                                                        </Border>
-                                                        <TextBlock Text="{Binding WindowTitle}"
-                                                                   FontSize="12"
-                                                                   FontWeight="SemiBold"
-                                                                   Foreground="#E4E4E7"
-                                                                   TextTrimming="CharacterEllipsis"
-                                                                   MaxWidth="210"
-                                                                   VerticalAlignment="Center"/>
-                                                    </StackPanel>
-                                                    <TextBlock Text="{Binding TimeFormatted}"
-                                                               HorizontalAlignment="Right"
-                                                               FontSize="11"
-                                                               Foreground="#71717A"
-                                                               VerticalAlignment="Center"/>
-                                                </Grid>
-
-                                                <!-- Bottom: Source to Target -->
-                                                <TextBlock Grid.Row="1"
-                                                           FontSize="11"
-                                                           Foreground="#A1A1AA"
-                                                           Margin="0,4,0,0">
-                                                    <Run Text="{Binding SourceMonitor}" Foreground="#F87171" FontWeight="SemiBold"/>
-                                                    <Run Text=" ➔ " Foreground="#71717A"/>
-                                                    <Run Text="{Binding TargetMonitor}" Foreground="#34D399" FontWeight="SemiBold"/>
-                                                </TextBlock>
-                                            </Grid>
-                                        </Border>
-                                    </DataTemplate>
-                                </ItemsControl.ItemTemplate>
-                            </ItemsControl>
-                        </StackPanel>
-                    </ScrollViewer>
-                </Grid>
-            </Border>
-
-            <!-- Settings & System Integration -->
-            <Border Grid.Column="2"
-                    Background="#18181B"
-                    BorderBrush="#27272A"
-                    BorderThickness="1"
-                    CornerRadius="14"
-                    Padding="16">
-                <Grid>
-                    <Grid.RowDefinitions>
-                        <RowDefinition Height="Auto"/>
-                        <RowDefinition Height="*"/>
-                        <RowDefinition Height="Auto"/>
-                    </Grid.RowDefinitions>
-
-                    <TextBlock Grid.Row="0" Text="Application Settings" FontSize="14" FontWeight="SemiBold" Foreground="White" Margin="0,0,0,12"/>
-
-                    <StackPanel Grid.Row="1">
-                        <!-- Start with Windows -->
-                        <Border Background="#202024" CornerRadius="8" Padding="12,10" Margin="0,0,0,8">
-                            <CheckBox Content="Launch at Windows Startup"
-                                      IsChecked="{Binding StartWithWindows}"
-                                      Foreground="#EDEDED"
-                                      FontSize="12"
-                                      FontWeight="SemiBold"
-                                      Cursor="Hand"/>
-                        </Border>
-
-                        <!-- Start Minimized -->
-                        <Border Background="#202024" CornerRadius="8" Padding="12,10" Margin="0,0,0,8">
-                            <CheckBox Content="Start Minimized to System Tray"
-                                      IsChecked="{Binding StartMinimized}"
-                                      Foreground="#EDEDED"
-                                      FontSize="12"
-                                      FontWeight="SemiBold"
-                                      Cursor="Hand"/>
-                        </Border>
-
-                        <!-- Show Relocation Notifications -->
-                        <Border Background="#202024" CornerRadius="8" Padding="12,10" Margin="0,0,0,8">
-                            <CheckBox Content="Show Tray Balloon on Relocate"
-                                      IsChecked="{Binding ShowNotifications}"
-                                      Foreground="#EDEDED"
-                                      FontSize="12"
-                                      FontWeight="SemiBold"
-                                      Cursor="Hand"/>
-                        </Border>
-                    </StackPanel>
-
-                    <!-- Notice -->
-                    <Border Grid.Row="2" Background="#202024" CornerRadius="8" Padding="12,8">
-                        <TextBlock Text="Closing this window minimizes NOTM to your notification area."
-                                   FontSize="11"
-                                   Foreground="#71717A"
-                                   TextWrapping="Wrap"/>
-                    </Border>
-                </Grid>
-            </Border>
-        </Grid>
     </Grid>
 </Window>

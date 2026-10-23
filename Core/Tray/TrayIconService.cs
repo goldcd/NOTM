@@ -1,5 +1,6 @@
 using System;
 using System.Drawing;
+using System.Drawing.Drawing2D;
 using System.Windows.Forms;
 using NOTM.Core.Native;
 using NOTM.Models;
@@ -16,6 +17,7 @@ public class TrayIconService : IDisposable
     public event Action? OnOpenRequested;
     public event Action<bool>? OnGuardToggled;
     public event Action? OnIdentifyRequested;
+    public event Action? OnResetPrimaryRequested;
     public event Action? OnExitRequested;
 
     public TrayIconService()
@@ -43,12 +45,14 @@ public class TrayIconService : IDisposable
         };
 
         var identifyItem = new ToolStripMenuItem("Identify Displays", null, (s, e) => OnIdentifyRequested?.Invoke());
+        var resetItem = new ToolStripMenuItem("Reset Target to Windows Primary", null, (s, e) => OnResetPrimaryRequested?.Invoke());
         var exitItem = new ToolStripMenuItem("Exit", null, (s, e) => OnExitRequested?.Invoke());
 
         _contextMenu.Items.Add(openItem);
         _contextMenu.Items.Add(_guardToggleItem);
         _contextMenu.Items.Add(new ToolStripSeparator());
         _contextMenu.Items.Add(identifyItem);
+        _contextMenu.Items.Add(resetItem);
         _contextMenu.Items.Add(new ToolStripSeparator());
         _contextMenu.Items.Add(exitItem);
 
@@ -60,12 +64,11 @@ public class TrayIconService : IDisposable
             Icon = CreateMonitorIcon(true)
         };
 
-        // Clicking the tray icon (left or right click) presents the options
+        // Clicking the tray icon presents the options immediately
         _notifyIcon.MouseUp += (s, e) =>
         {
             if (e.Button == MouseButtons.Left)
             {
-                // Show menu immediately on click
                 _contextMenu.Show(System.Windows.Forms.Cursor.Position);
             }
         };
@@ -102,7 +105,9 @@ public class TrayIconService : IDisposable
         // 32x32 crisp system tray icon
         using var bmp = new Bitmap(32, 32);
         using var g = Graphics.FromImage(bmp);
-        g.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
+        g.SmoothingMode = SmoothingMode.AntiAlias;
+        g.InterpolationMode = InterpolationMode.HighQualityBicubic;
+        g.PixelOffsetMode = PixelOffsetMode.HighQuality;
 
         // Monitor Stand
         using var standBrush = new SolidBrush(System.Drawing.Color.FromArgb(160, 168, 180));
@@ -110,7 +115,7 @@ public class TrayIconService : IDisposable
         g.FillRectangle(standBrush, 9, 25, 14, 2);
 
         // Monitor Outer Bezel
-        using var bezelBrush = new SolidBrush(System.Drawing.Color.FromArgb(40, 44, 52));
+        using var bezelBrush = new SolidBrush(System.Drawing.Color.FromArgb(38, 42, 50));
         using var bezelPen = new Pen(System.Drawing.Color.FromArgb(200, 205, 215), 1.5f);
         g.FillRectangle(bezelBrush, 3, 3, 26, 17);
         g.DrawRectangle(bezelPen, 3, 3, 26, 17);
@@ -121,25 +126,26 @@ public class TrayIconService : IDisposable
 
         if (withForbiddenOverlay)
         {
-            // Requirement 1: Red forbidden overlay (red circle with horizontal white line ⛔)
-            int circleX = 8;
+            // Requirement 1: Red circle with DIAGONAL line (Prohibition sign 🚫)
+            int circleX = 11;
             int circleY = 4;
-            int diameter = 15;
+            int size = 16;
 
-            // Red circle
-            using var redBrush = new SolidBrush(System.Drawing.Color.FromArgb(220, 38, 38)); // Vivid crimson
-            using var whitePen = new Pen(System.Drawing.Color.FromArgb(255, 255, 255), 1f);
-            g.FillEllipse(redBrush, circleX, circleY, diameter, diameter);
-            g.DrawEllipse(whitePen, circleX, circleY, diameter, diameter);
+            // Semi-translucent white backplate for high contrast on any taskbar color
+            using var plateBrush = new SolidBrush(System.Drawing.Color.FromArgb(235, 255, 255, 255));
+            g.FillEllipse(plateBrush, circleX, circleY, size, size);
 
-            // Horizontal bar across center
-            using var barBrush = new SolidBrush(System.Drawing.Color.White);
-            g.FillRectangle(barBrush, circleX + 2, circleY + 6, diameter - 4, 3);
+            // Red circle ring
+            using var redPen = new Pen(System.Drawing.Color.FromArgb(225, 29, 72), 2.5f);
+            g.DrawEllipse(redPen, circleX + 1, circleY + 1, size - 2, size - 2);
+
+            // Red diagonal line from top-left (135 deg) to bottom-right (315 deg)
+            g.DrawLine(redPen, circleX + 4, circleY + 4, circleX + size - 4, circleY + size - 4);
         }
         else
         {
-            // Neutral screen glow when toggled off (overlay removed)
-            using var pausedBrush = new SolidBrush(System.Drawing.Color.FromArgb(100, 116, 139));
+            // When toggled off, forbidden overlay is completely removed; subtle paused indicator
+            using var pausedBrush = new SolidBrush(System.Drawing.Color.FromArgb(90, 105, 125));
             g.FillRectangle(pausedBrush, 9, 9, 14, 5);
         }
 
@@ -147,7 +153,7 @@ public class TrayIconService : IDisposable
         using var tempIcon = Icon.FromHandle(hIcon);
         var icon = (Icon)tempIcon.Clone();
 
-        // Release unmanaged GDI icon handle to prevent memory leaks
+        // Release unmanaged GDI icon handle to prevent leaks
         Win32.DestroyIcon(hIcon);
 
         return icon;

@@ -153,6 +153,7 @@ public class MainWindowViewModel : INotifyPropertyChanged
         _engine.OnWindowRelocated += HandleWindowRelocated;
         _trayService.OnGuardToggled += (enabled) => IsGuardActive = enabled;
         _trayService.OnIdentifyRequested += () => IdentifyAllDisplays();
+        _trayService.OnResetPrimaryRequested += () => ResetToWindowsPrimary();
 
         LoadDisplays();
     }
@@ -267,12 +268,17 @@ public class MainWindowViewModel : INotifyPropertyChanged
 
     public void ToggleExcluded(DisplayInfo display)
     {
-        display.IsExcluded = !display.IsExcluded;
-        if (display.IsExcluded && display.IsTargetPrimary)
+        if (!display.IsExcluded && display.IsTargetPrimary)
         {
-            display.IsTargetPrimary = false;
-            EnsureValidTargetPrimary();
+            MessageBox.Show(
+                "You cannot block your primary target display.\nPlease set another display as your primary target first.",
+                "Primary Display Cannot Be Blocked",
+                MessageBoxButton.OK,
+                MessageBoxImage.Information);
+            return;
         }
+
+        display.IsExcluded = !display.IsExcluded;
 
         UpdateExcludedSettingsList();
         SyncConfiguration();
@@ -280,10 +286,40 @@ public class MainWindowViewModel : INotifyPropertyChanged
 
         OnPropertyChanged(nameof(BlockedCount));
         OnPropertyChanged(nameof(AllowedCount));
+        OnPropertyChanged(nameof(IsSelectedPrimary));
+        OnPropertyChanged(nameof(IsSelectedExcluded));
 
         if (display.IsExcluded)
         {
-            // Immediately relocate any windows already sitting on this newly excluded monitor!
+            // Immediately relocate any windows sitting on this newly excluded monitor
+            SweepNow();
+        }
+    }
+
+    public void ResetToWindowsPrimary()
+    {
+        var osPrimary = Displays.FirstOrDefault(d => d.IsOsPrimary) ?? Displays.FirstOrDefault();
+        if (osPrimary != null)
+        {
+            osPrimary.IsExcluded = false;
+            foreach (var d in Displays)
+            {
+                d.IsTargetPrimary = (d == osPrimary);
+            }
+
+            _settings.TargetPrimaryHardwareId = osPrimary.HardwareId;
+            _settings.TargetPrimaryDeviceName = osPrimary.DeviceName;
+
+            UpdateExcludedSettingsList();
+            SyncConfiguration();
+            SaveSettings();
+
+            SelectedDisplay = osPrimary;
+            OnPropertyChanged(nameof(IsSelectedPrimary));
+            OnPropertyChanged(nameof(IsSelectedExcluded));
+            OnPropertyChanged(nameof(BlockedCount));
+            OnPropertyChanged(nameof(AllowedCount));
+
             SweepNow();
         }
     }

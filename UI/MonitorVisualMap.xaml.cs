@@ -116,8 +116,8 @@ public partial class MonitorVisualMap : UserControl
 
         EmptyNotice.Visibility = Visibility.Collapsed;
 
-        double availableW = ActualWidth > 60 ? ActualWidth - 60 : 640;
-        double availableH = ActualHeight > 50 ? ActualHeight - 50 : 160;
+        double availableW = ActualWidth > 50 ? ActualWidth - 50 : 660;
+        double availableH = ActualHeight > 40 ? ActualHeight - 40 : 180;
 
         int minX = displays.Min(d => d.Left);
         int minY = displays.Min(d => d.Top);
@@ -131,18 +131,18 @@ public partial class MonitorVisualMap : UserControl
         double scaleY = availableH / totalSpanY;
         double scale = Math.Min(scaleX, scaleY);
 
-        double totalCanvasW = totalSpanX * scale;
-        double totalCanvasH = totalSpanY * scale;
+        double totalCanvasW = Math.Round(totalSpanX * scale);
+        double totalCanvasH = Math.Round(totalSpanY * scale);
 
         MapCanvas.Width = totalCanvasW;
         MapCanvas.Height = totalCanvasH;
 
         foreach (var d in displays)
         {
-            double x = (d.Left - minX) * scale;
-            double y = (d.Top - minY) * scale;
-            double w = Math.Max(60, d.Width * scale);
-            double h = Math.Max(48, d.Height * scale);
+            double x = Math.Round((d.Left - minX) * scale);
+            double y = Math.Round((d.Top - minY) * scale);
+            double w = Math.Round(Math.Max(90, d.Width * scale));
+            double h = Math.Round(Math.Max(70, d.Height * scale));
 
             bool isSelected = SelectedDisplay != null && (SelectedDisplay == d || SelectedDisplay.DeviceName == d.DeviceName);
 
@@ -152,21 +152,22 @@ public partial class MonitorVisualMap : UserControl
                 Height = h,
                 CornerRadius = new CornerRadius(10),
                 Cursor = Cursors.Hand,
-                ToolTip = $"{d.DisplayTitle}\nResolution: {d.ResolutionString}\nStatus: {d.StatusDescription}\nClick to select this display"
+                UseLayoutRounding = true,
+                SnapsToDevicePixels = true,
+                ToolTip = $"{d.DisplayTitle}\nResolution: {d.ResolutionString}\nStatus: {d.StatusDescription}\nClick to select"
             };
 
-            // Replicate Windows 11 Display Settings monitor block style
             if (isSelected)
             {
-                border.BorderBrush = new SolidColorBrush(System.Windows.Media.Color.FromRgb(59, 130, 246)); // Selected Accent Blue
-                border.BorderThickness = new Thickness(3);
+                border.BorderBrush = new SolidColorBrush(System.Windows.Media.Color.FromRgb(59, 130, 246));
+                border.BorderThickness = new Thickness(2.5);
                 border.Background = new SolidColorBrush(System.Windows.Media.Color.FromArgb(90, 37, 99, 235));
                 border.Effect = new DropShadowEffect
                 {
                     Color = System.Windows.Media.Color.FromRgb(59, 130, 246),
-                    BlurRadius = 14,
+                    BlurRadius = 12,
                     ShadowDepth = 0,
-                    Opacity = 0.4
+                    Opacity = 0.5
                 };
             }
             else
@@ -187,72 +188,87 @@ public partial class MonitorVisualMap : UserControl
                 else
                 {
                     border.BorderBrush = new SolidColorBrush(System.Windows.Media.Color.FromRgb(82, 82, 91));
-                    border.Background = new SolidColorBrush(System.Windows.Media.Color.FromArgb(25, 255, 255, 255));
+                    border.Background = new SolidColorBrush(System.Windows.Media.Color.FromArgb(30, 255, 255, 255));
                 }
             }
 
-            var stack = new StackPanel
+            var grid = new Grid
             {
-                VerticalAlignment = System.Windows.VerticalAlignment.Center,
-                HorizontalAlignment = System.Windows.HorizontalAlignment.Center,
-                Margin = new Thickness(4)
+                Margin = new Thickness(8, 6, 8, 6)
             };
 
-            // Monitor Number [1] or [2] (Large and bold like Windows Display settings)
-            var indexText = new TextBlock
+            // Top-left compact badge for monitor index (Requirement 3: clean & not overwhelming)
+            var indexBadge = new Border
+            {
+                Width = 22,
+                Height = 22,
+                CornerRadius = new CornerRadius(6),
+                Background = isSelected
+                    ? new SolidColorBrush(System.Windows.Media.Color.FromRgb(37, 99, 235))
+                    : new SolidColorBrush(System.Windows.Media.Color.FromArgb(120, 30, 30, 35)),
+                HorizontalAlignment = System.Windows.HorizontalAlignment.Left,
+                VerticalAlignment = System.Windows.VerticalAlignment.Top
+            };
+            indexBadge.Child = new TextBlock
             {
                 Text = d.Index.ToString(),
-                FontSize = Math.Max(18, Math.Min(34, h * 0.40)),
+                FontSize = 12,
                 FontWeight = FontWeights.Bold,
                 Foreground = Brushes.White,
-                HorizontalAlignment = System.Windows.HorizontalAlignment.Center
+                HorizontalAlignment = System.Windows.HorizontalAlignment.Center,
+                VerticalAlignment = System.Windows.VerticalAlignment.Center
             };
-            stack.Children.Add(indexText);
+            grid.Children.Add(indexBadge);
 
-            // Display Title / Friendly Name
+            // Center Content: Display Title and Resolution
+            var centerStack = new StackPanel
+            {
+                HorizontalAlignment = System.Windows.HorizontalAlignment.Center,
+                VerticalAlignment = System.Windows.VerticalAlignment.Center,
+                Margin = new Thickness(0, 4, 0, 0)
+            };
+
             var nameText = new TextBlock
             {
                 Text = d.DisplayTitle,
-                FontSize = Math.Max(10, Math.Min(12, h * 0.16)),
-                Foreground = new SolidColorBrush(System.Windows.Media.Color.FromRgb(228, 228, 231)),
-                FontWeight = FontWeights.SemiBold,
+                FontSize = 13,
+                FontWeight = FontWeights.Bold,
+                Foreground = Brushes.White,
                 HorizontalAlignment = System.Windows.HorizontalAlignment.Center,
                 TextTrimming = TextTrimming.CharacterEllipsis,
-                MaxWidth = Math.Max(40, w - 10)
+                MaxWidth = Math.Max(50, w - 16)
             };
-            stack.Children.Add(nameText);
+            centerStack.Children.Add(nameText);
 
-            // Status Badge
-            string statusStr;
-            SolidColorBrush badgeColor;
-            if (d.IsTargetPrimary)
+            var resText = new TextBlock
             {
-                statusStr = "PRIMARY TARGET";
-                badgeColor = new SolidColorBrush(System.Windows.Media.Color.FromRgb(52, 211, 153));
-            }
-            else if (d.IsExcluded)
-            {
-                statusStr = "BLOCKED ⛔";
-                badgeColor = new SolidColorBrush(System.Windows.Media.Color.FromRgb(248, 113, 113));
-            }
-            else
-            {
-                statusStr = "ALLOWED";
-                badgeColor = new SolidColorBrush(System.Windows.Media.Color.FromRgb(161, 161, 170));
-            }
+                Text = d.ResolutionString,
+                FontSize = 11,
+                Foreground = new SolidColorBrush(System.Windows.Media.Color.FromRgb(161, 161, 170)),
+                HorizontalAlignment = System.Windows.HorizontalAlignment.Center,
+                Margin = new Thickness(0, 1, 0, 0)
+            };
+            centerStack.Children.Add(resText);
+
+            // Status label
+            string statusStr = d.IsTargetPrimary ? "PRIMARY TARGET" : (d.IsExcluded ? "BLOCKED ⛔" : "ALLOWED");
+            var statusColor = d.IsTargetPrimary
+                ? System.Windows.Media.Color.FromRgb(52, 211, 153)
+                : (d.IsExcluded ? System.Windows.Media.Color.FromRgb(248, 113, 113) : System.Windows.Media.Color.FromRgb(161, 161, 170));
 
             var statusText = new TextBlock
             {
                 Text = statusStr,
-                FontSize = 9,
-                FontWeight = FontWeights.Bold,
-                Foreground = badgeColor,
+                FontSize = 9.5,
+                FontWeight = FontWeights.SemiBold,
+                Foreground = new SolidColorBrush(statusColor),
                 HorizontalAlignment = System.Windows.HorizontalAlignment.Center,
                 Margin = new Thickness(0, 3, 0, 0)
             };
-            stack.Children.Add(statusText);
+            centerStack.Children.Add(statusText);
 
-            border.Child = stack;
+            grid.Children.Add(centerStack);
+            border.Child = grid;
 
             border.MouseLeftButtonUp += (s, e) =>
             {

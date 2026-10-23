@@ -41,7 +41,7 @@ public class WindowRelocationEngine : IDisposable
 
             _winEventDelegate = HookCallback;
 
-            // Hook window drag/resize completion (drop event)
+            // 1. Hook window drag/resize completion (mouse drop event)
             IntPtr hookMoveEnd = Win32.SetWinEventHook(
                 Win32.EVENT_SYSTEM_MOVESIZEEND,
                 Win32.EVENT_SYSTEM_MOVESIZEEND,
@@ -51,7 +51,17 @@ public class WindowRelocationEngine : IDisposable
                 0,
                 Win32.WINEVENT_OUTOFCONTEXT | Win32.WINEVENT_SKIPOWNPROCESS);
 
-            // Hook window foreground change
+            // 2. Hook window location change (captures keyboard moves like Shift+Win+Arrow instantly)
+            IntPtr hookLocation = Win32.SetWinEventHook(
+                Win32.EVENT_OBJECT_LOCATIONCHANGE,
+                Win32.EVENT_OBJECT_LOCATIONCHANGE,
+                IntPtr.Zero,
+                _winEventDelegate,
+                0,
+                0,
+                Win32.WINEVENT_OUTOFCONTEXT | Win32.WINEVENT_SKIPOWNPROCESS);
+
+            // 3. Hook window foreground change
             IntPtr hookForeground = Win32.SetWinEventHook(
                 Win32.EVENT_SYSTEM_FOREGROUND,
                 Win32.EVENT_SYSTEM_FOREGROUND,
@@ -61,7 +71,7 @@ public class WindowRelocationEngine : IDisposable
                 0,
                 Win32.WINEVENT_OUTOFCONTEXT | Win32.WINEVENT_SKIPOWNPROCESS);
 
-            // Hook new window shown
+            // 4. Hook new window shown
             IntPtr hookShow = Win32.SetWinEventHook(
                 Win32.EVENT_OBJECT_SHOW,
                 Win32.EVENT_OBJECT_SHOW,
@@ -72,6 +82,7 @@ public class WindowRelocationEngine : IDisposable
                 Win32.WINEVENT_OUTOFCONTEXT | Win32.WINEVENT_SKIPOWNPROCESS);
 
             if (hookMoveEnd != IntPtr.Zero) _hookHandles.Add(hookMoveEnd);
+            if (hookLocation != IntPtr.Zero) _hookHandles.Add(hookLocation);
             if (hookForeground != IntPtr.Zero) _hookHandles.Add(hookForeground);
             if (hookShow != IntPtr.Zero) _hookHandles.Add(hookShow);
 
@@ -152,6 +163,13 @@ public class WindowRelocationEngine : IDisposable
         // idObject: 0 = OBJID_WINDOW
         if (idObject != 0) return;
 
+        if (eventType == Win32.EVENT_OBJECT_LOCATIONCHANGE)
+        {
+            // For location change events, only inspect active foreground window to keep 0% CPU
+            IntPtr fg = Win32.GetForegroundWindow();
+            if (hwnd != fg) return;
+        }
+
         CheckAndRelocateWindow(hwnd);
     }
 
@@ -159,10 +177,10 @@ public class WindowRelocationEngine : IDisposable
     {
         if (!_isGuardEnabled || hWnd == IntPtr.Zero) return false;
 
-        // Debounce: don't process the same window repeatedly within 500ms
+        // Debounce: don't process the same window repeatedly within 400ms
         if (_recentlyRelocated.TryGetValue(hWnd, out var lastTime))
         {
-            if ((DateTime.UtcNow - lastTime).TotalMilliseconds < 500)
+            if ((DateTime.UtcNow - lastTime).TotalMilliseconds < 400)
             {
                 return false;
             }
@@ -231,14 +249,19 @@ public class WindowRelocationEngine : IDisposable
 
         if (activeMonitors.Count == 0) return false;
 
-        var excludedMonitors = activeMonitors.Where(m => m.IsExcluded).ToList();
-        if (excludedMonitors.Count == 0) return false;
-
-        var targetPrimary = activeMonitors.FirstOrDefault(m => m.IsTargetPrimary)
-                            ?? activeMonitors.FirstOrDefault(m => m.IsOsPrimary)
+        // Target primary monitor: must NOT be excluded
+        var targetPrimary = activeMonitors.FirstOrDefault(m => m.IsTargetPrimary && !m.IsExcluded)
+                            ?? activeMonitors.FirstOrDefault(m => m.IsOsPrimary && !m.IsExcluded)
                             ?? activeMonitors.FirstOrDefault(m => !m.IsExcluded);
 
         if (targetPrimary == null) return false;
+
+        // Excluded monitors can NEVER include the target primary monitor! (Prevents same-monitor relocation)
+        var excludedMonitors = activeMonitors
+            .Where(m => m.IsExcluded && m.HMonitor != targetPrimary.HMonitor && m.DeviceName != targetPrimary.DeviceName)
+            .ToList();
+
+        if (excludedMonitors.Count == 0) return false;
 
         // Check which monitor the window is currently on
         IntPtr hCurrentMonitor = Win32.MonitorFromWindow(hWnd, Win32.MONITOR_DEFAULTTONEAREST);
@@ -254,24 +277,30 @@ public class WindowRelocationEngine : IDisposable
             sourceExcludedMonitor = excludedMonitors.FirstOrDefault(m => m.ContainsPoint(centerX, centerY));
         }
 
-        // 3. Check if significant overlap (>35% area) with an excluded monitor
+        // 3. Check if significant overlap (>30% area) with an excluded monitor
         if (sourceExcludedMonitor == null)
         {
-            double windowArea = rect.Width * rect.Height;
-            foreach (var exc in excludedMonitors)
+            double windowArea = (double)rect.Width * rect.Height;
+            if (windowArea > 0)
             {
-                double overlap = exc.OverlapArea(rect.Left, rect.Top, rect.Right, rect.Bottom);
-                if (overlap > 0 && (overlap / windowArea) > 0.35)
+                foreach (var exc in excludedMonitors)
                 {
-                    sourceExcludedMonitor = exc;
-                    break;
+                    double overlap = exc.OverlapArea(rect.Left, rect.Top, rect.Right, rect.Bottom);
+                    if (overlap > 0 && (overlap / windowArea) > 0.30)
+                    {
+                        sourceExcludedMonitor = exc;
+                        break;
+                    }
                 }
             }
         }
 
-        if (sourceExcludedMonitor == null)
+        // Sanity Check: Must be on an excluded monitor, and NEVER from targetPrimary to targetPrimary!
+        if (sourceExcludedMonitor == null ||
+            sourceExcludedMonitor.HMonitor == targetPrimary.HMonitor ||
+            sourceExcludedMonitor.DeviceName == targetPrimary.DeviceName)
         {
-            return false; // Window is not on an excluded monitor
+            return false;
         }
 
         // RELOCATE to Target Primary!
@@ -305,9 +334,21 @@ public class WindowRelocationEngine : IDisposable
         {
             // Restore, move into target monitor, then re-maximize
             Win32.ShowWindow(hWnd, Win32.SW_RESTORE);
-            Win32.SetWindowPos(hWnd, IntPtr.Zero, targetX, targetY, targetWidth, targetHeight,
-                Win32.SWP_NOZORDER | Win32.SWP_NOACTIVATE);
+            Win32.SetWindowPos(
+                hWnd,
+                IntPtr.Zero,
+                targetX,
+                targetY,
+                targetWidth,
+                targetHeight,
+                Win32.SWP_NOZORDER | Win32.SWP_NOACTIVATE | Win32.SWP_FRAMECHANGED | Win32.SWP_SHOWWINDOW);
+
             Win32.ShowWindow(hWnd, Win32.SW_MAXIMIZE);
+            Win32.RedrawWindow(
+                hWnd,
+                IntPtr.Zero,
+                IntPtr.Zero,
+                Win32.RDW_INVALIDATE | Win32.RDW_UPDATENOW | Win32.RDW_ALLCHILDREN | Win32.RDW_FRAME);
         }
         else
         {
@@ -319,6 +360,12 @@ public class WindowRelocationEngine : IDisposable
                 targetWidth,
                 targetHeight,
                 Win32.SWP_NOZORDER | Win32.SWP_NOACTIVATE | Win32.SWP_FRAMECHANGED | Win32.SWP_SHOWWINDOW);
+
+            Win32.RedrawWindow(
+                hWnd,
+                IntPtr.Zero,
+                IntPtr.Zero,
+                Win32.RDW_INVALIDATE | Win32.RDW_UPDATENOW | Win32.RDW_ALLCHILDREN | Win32.RDW_FRAME);
         }
 
         var logItem = new RelocationLogItem
