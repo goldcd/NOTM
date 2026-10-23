@@ -23,10 +23,19 @@ When you connect an HDMI soundbar (such as a Panasonic SoundSlayer), AV receiver
 
 ## 2. How to Use It
 
-### Quick Start
+### ⚡ Quick Install (One-Line PowerShell)
+Open PowerShell (no administrator rights required) and paste:
+```powershell
+irm https://raw.githubusercontent.com/goldcd/NOTM/main/install.ps1 | iex
+```
+*What this does: downloads NOTM from GitHub, installs it cleanly to `%LocalAppData%\Programs\NOTM`, creates a Start Menu shortcut, registers it in Windows Installed Apps, and starts NOTM.*
+
+---
+
+### Manual Installation & Running
 1. **Run or Install**:
-   - **Standalone**: Launch `dist\NOTM.exe` directly, or
-   - **Install to System**: Double-click `install.cmd` (installs to `%LocalAppData%\Programs\NOTM` and creates a Start Menu shortcut; no admin privileges required).
+   - **One-Click Install**: Run `install.cmd` or `install.ps1` (no admin privileges required).
+   - **Standalone**: Launch `dist\NOTM.exe` directly without installing.
 2. **Configure Displays**:
    - Open NOTM (it opens on start, or double-click its system tray icon).
    - The UI shows your monitors arranged to match their physical positions in Windows Display Settings.
