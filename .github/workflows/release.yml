@@ -22,10 +22,22 @@ jobs:
       with:
         dotnet-version: '8.0.x'
 
+    - name: Determine version
+      id: version
+      shell: pwsh
+      run: |
+        # Tag 'v1.2.3' -> '1.2.3'. Manual runs (not on a tag) keep the version from NOTM.csproj.
+        if ($env:GITHUB_REF -match '^refs/tags/v(\d+\.\d+\.\d+.*)$') {
+          "value=$($Matches[1])" >> $env:GITHUB_OUTPUT
+        } else {
+          "value=" >> $env:GITHUB_OUTPUT
+        }
+
     - name: Publish Single-File Executable
       shell: pwsh
       run: |
-        dotnet publish NOTM.csproj -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -p:EnableCompressionInSingleFile=true -o dist/
+        $versionArg = if ('${{ steps.version.outputs.value }}') { '-p:Version=${{ steps.version.outputs.value }}' } else { '' }
+        dotnet publish NOTM.csproj -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -p:EnableCompressionInSingleFile=true $versionArg -o dist/
 
     - name: Create GitHub Release
       uses: softprops/action-gh-release@v2

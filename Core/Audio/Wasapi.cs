@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Runtime.InteropServices;
 
 namespace NOTM.Core.Audio;
@@ -22,12 +22,15 @@ public static class Wasapi
 
     public const int AUDCLNT_SHAREMODE_SHARED = 0;
     public const int AUDCLNT_STREAMFLAGS_EVENTCALLBACK = 0x00040000;
+    public const int AUDCLNT_STREAMFLAGS_NOPERSIST = 0x00080000;
+    public const int AUDCLNT_STREAMFLAGS_AUTOCONVERTPCM = unchecked((int)0x80000000);
     public const int AUDCLNT_BUFFERFLAGS_SILENT = 0x00000002;
 
+    public const int CLSCTX_INPROC_SERVER = 1;
     public const int CLSCTX_ALL = 23;
 
     public static readonly Guid IID_IAudioClient = new("1CB9AD4C-DBFA-4c32-B178-C2F568A703B2");
-    public static readonly Guid IID_IAudioRenderClient = new("F294AC80-3186-4283-9280-E0A6037F4C4B");
+    public static readonly Guid IID_IAudioRenderClient = new("F294ACFC-3146-4483-A7BF-ADDCA7C260E2");
 
     [ComImport]
     [Guid("BCDE0395-E52F-467C-8E3D-C4579291692E")]
@@ -39,40 +42,40 @@ public static class Wasapi
     [InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
     public interface IMMDeviceEnumerator
     {
-        int EnumAudioEndpoints(int dataFlow, int stateMask, out IMMDeviceCollection ppDevices);
-        int GetDefaultAudioEndpoint(int dataFlow, int role, out IMMDevice ppDevice);
-        int GetDevice([MarshalAs(UnmanagedType.LPWStr)] string pwstrId, out IMMDevice ppDevice);
-        int RegisterEndpointNotificationCallback(IntPtr pClient);
-        int UnregisterEndpointNotificationCallback(IntPtr pClient);
+        [PreserveSig] int EnumAudioEndpoints(int dataFlow, int stateMask, out IMMDeviceCollection ppDevices);
+        [PreserveSig] int GetDefaultAudioEndpoint(int dataFlow, int role, out IMMDevice ppDevice);
+        [PreserveSig] int GetDevice([MarshalAs(UnmanagedType.LPWStr)] string pwstrId, out IMMDevice ppDevice);
+        [PreserveSig] int RegisterEndpointNotificationCallback(IntPtr pClient);
+        [PreserveSig] int UnregisterEndpointNotificationCallback(IntPtr pClient);
     }
 
     [Guid("0BD7A1BE-7A1A-44DB-8397-CC5392387B5E")]
     [InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
     public interface IMMDeviceCollection
     {
-        int GetCount(out uint pcDevices);
-        int Item(uint nDevice, out IMMDevice ppDevice);
+        [PreserveSig] int GetCount(out uint pcDevices);
+        [PreserveSig] int Item(uint nDevice, out IMMDevice ppDevice);
     }
 
     [Guid("D666063F-1587-4E43-81F1-B948E807363F")]
     [InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
     public interface IMMDevice
     {
-        int Activate(ref Guid iid, int dwClsCtx, IntPtr pActivationParams, [MarshalAs(UnmanagedType.IUnknown)] out object ppInterface);
-        int OpenPropertyStore(int stgmAccess, out IPropertyStore ppProperties);
-        int GetId([MarshalAs(UnmanagedType.LPWStr)] out string ppstrId);
-        int GetState(out int pdwState);
+        [PreserveSig] int Activate(ref Guid iid, int dwClsCtx, IntPtr pActivationParams, [MarshalAs(UnmanagedType.IUnknown)] out object ppInterface);
+        [PreserveSig] int OpenPropertyStore(int stgmAccess, out IPropertyStore ppProperties);
+        [PreserveSig] int GetId([MarshalAs(UnmanagedType.LPWStr)] out string ppstrId);
+        [PreserveSig] int GetState(out int pdwState);
     }
 
     [Guid("886d8eeb-8cf2-4446-8d02-cdba1dbdcf99")]
     [InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
     public interface IPropertyStore
     {
-        int GetCount(out uint cProps);
-        int GetAt(uint iProp, out IntPtr pkey);
-        int GetValue(ref PROPERTYKEY key, out PROPVARIANT pv);
-        int SetValue(ref PROPERTYKEY key, ref PROPVARIANT pv);
-        int Commit();
+        [PreserveSig] int GetCount(out uint cProps);
+        [PreserveSig] int GetAt(uint iProp, out IntPtr pkey);
+        [PreserveSig] int GetValue(ref PROPERTYKEY key, out PROPVARIANT pv);
+        [PreserveSig] int SetValue(ref PROPERTYKEY key, ref PROPVARIANT pv);
+        [PreserveSig] int Commit();
     }
 
     [StructLayout(LayoutKind.Sequential)]
@@ -82,42 +85,101 @@ public static class Wasapi
         public uint pid;
     }
 
-    [StructLayout(LayoutKind.Explicit)]
+    // Native PROPVARIANT is 24 bytes on x64 (16 on x86); size must match or GetValue overruns the struct.
+    [StructLayout(LayoutKind.Explicit, Size = 24)]
     public struct PROPVARIANT
     {
         [FieldOffset(0)] public ushort vt;
         [FieldOffset(8)] public IntPtr pwszVal;
         [FieldOffset(8)] public uint uintVal;
+        [FieldOffset(8)] public uint blobSize;
+        [FieldOffset(16)] public IntPtr blobData;
+    }
+
+    /// <summary>PKEY_AudioEngine_DeviceFormat: the real format the endpoint hardware outputs.</summary>
+    public static readonly PROPERTYKEY PKEY_AudioEngine_DeviceFormat = new()
+    {
+        fmtid = new Guid("f19f064d-082c-4e27-bc73-6882a1bb8e4c"),
+        pid = 0
+    };
+
+    /// <summary>
+    /// Returns true when the endpoint's hardware output format is 16-bit PCM. The shared-mode mix format
+    /// is always 32-bit float, so it cannot be used to decide this. A 24-bit-sized keep-alive sample
+    /// rounds to digital silence on a 16-bit output and never reaches the device.
+    /// </summary>
+    public static bool IsDeviceOutput16Bit(IMMDevice device)
+    {
+        try
+        {
+            if (device.OpenPropertyStore(STGM_READ, out IPropertyStore store) != 0 || store == null)
+                return false;
+            try
+            {
+                var key = PKEY_AudioEngine_DeviceFormat;
+                if (store.GetValue(ref key, out PROPVARIANT pv) != 0)
+                    return false;
+                try
+                {
+                    // VT_BLOB = 65, blob contains a WAVEFORMATEX(-TENSIBLE)
+                    if (pv.vt == 65 && pv.blobData != IntPtr.Zero && pv.blobSize >= 18)
+                    {
+                        ushort bits = (ushort)Marshal.ReadInt16(pv.blobData, 14);
+                        return bits == 16;
+                    }
+                }
+                finally
+                {
+                    PropVariantClear(ref pv);
+                }
+            }
+            finally
+            {
+                Marshal.ReleaseComObject(store);
+            }
+        }
+        catch
+        {
+            // Fall through to default (24-bit sized sample)
+        }
+        return false;
     }
 
     [Guid("1CB9AD4C-DBFA-4c32-B178-C2F568A703B2")]
     [InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
     public interface IAudioClient
     {
-        int Initialize(int shareMode, int streamFlags, long hnsBufferDuration, long hnsPeriodicity, IntPtr pFormat, ref Guid audioSessionGuid);
-        int GetBufferSize(out uint pNumBufferFrames);
-        int GetStreamLatency(out long phnsLatency);
-        int GetCurrentPadding(out uint pNumPaddingFrames);
-        int IsFormatSupported(int shareMode, IntPtr pFormat, out IntPtr ppClosestMatch);
-        int GetMixFormat(out IntPtr ppDeviceFormat);
-        int GetDevicePeriod(out long phnsDefaultDevicePeriod, out long phnsMinimumDevicePeriod);
-        int Start();
-        int Stop();
-        int Reset();
-        int SetEventHandle(IntPtr eventHandle);
-        int GetService(ref Guid riid, [MarshalAs(UnmanagedType.IUnknown)] out object ppv);
+        [PreserveSig] int Initialize(int shareMode, int streamFlags, long hnsBufferDuration, long hnsPeriodicity, IntPtr pFormat, ref Guid audioSessionGuid);
+        [PreserveSig] int GetBufferSize(out uint pNumBufferFrames);
+        [PreserveSig] int GetStreamLatency(out long phnsLatency);
+        [PreserveSig] int GetCurrentPadding(out uint pNumPaddingFrames);
+        [PreserveSig] int IsFormatSupported(int shareMode, IntPtr pFormat, out IntPtr ppClosestMatch);
+        [PreserveSig] int GetMixFormat(out IntPtr ppDeviceFormat);
+        [PreserveSig] int GetDevicePeriod(out long phnsDefaultDevicePeriod, out long phnsMinimumDevicePeriod);
+        [PreserveSig] int Start();
+        [PreserveSig] int Stop();
+        [PreserveSig] int Reset();
+        [PreserveSig] int SetEventHandle(IntPtr eventHandle);
+        [PreserveSig] int GetService(ref Guid riid, out IntPtr ppv);
     }
 
-    [Guid("F294AC80-3186-4283-9280-E0A6037F4C4B")]
+    [Guid("F294ACFC-3146-4483-A7BF-ADDCA7C260E2")]
     [InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
     public interface IAudioRenderClient
     {
-        int GetBuffer(uint numFramesRequested, out IntPtr ppData);
-        int ReleaseBuffer(uint numFramesWritten, int dwFlags);
+        [PreserveSig] int GetBuffer(uint numFramesRequested, out IntPtr ppData);
+        [PreserveSig] int ReleaseBuffer(uint numFramesWritten, int dwFlags);
     }
 
     [DllImport("kernel32.dll", EntryPoint = "RtlZeroMemory")]
     public static extern void ZeroMemory(IntPtr dest, IntPtr size);
+
+    [DllImport("avrt.dll", CharSet = CharSet.Unicode, EntryPoint = "AvSetMmThreadCharacteristicsW")]
+    public static extern IntPtr AvSetMmThreadCharacteristics(string taskName, ref uint taskIndex);
+
+    [DllImport("avrt.dll", EntryPoint = "AvRevertMmThreadCharacteristics")]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    public static extern bool AvRevertMmThreadCharacteristics(IntPtr handle);
 
     [DllImport("ole32.dll")]
     public static extern int PropVariantClear(ref PROPVARIANT pvar);
