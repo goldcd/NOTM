@@ -64,6 +64,18 @@ public partial class App : Application
 
     public void ShowMainWindow()
     {
+        if (Dispatcher.CheckAccess())
+        {
+            ShowMainWindowInternal();
+        }
+        else
+        {
+            Dispatcher.InvokeAsync(ShowMainWindowInternal);
+        }
+    }
+
+    private void ShowMainWindowInternal()
+    {
         if (_mainWindow == null) return;
 
         if (!_mainWindow.IsVisible)
@@ -79,6 +91,7 @@ public partial class App : Application
         _mainWindow.Activate();
         _mainWindow.Focus();
     }
+
 
     private void ShutdownApplication()
     {

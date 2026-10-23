@@ -64,17 +64,19 @@ public class TrayIconService : IDisposable
             Icon = CreateMonitorIcon(true)
         };
 
-        // Clicking the tray icon presents the options immediately
-        _notifyIcon.MouseUp += (s, e) =>
+        // Single left-click directly opens the application GUI.
+        // Right-click automatically opens the ContextMenuStrip.
+        _notifyIcon.MouseClick += (s, e) =>
         {
             if (e.Button == MouseButtons.Left)
             {
-                _contextMenu.Show(System.Windows.Forms.Cursor.Position);
+                OnOpenRequested?.Invoke();
             }
         };
 
         _notifyIcon.DoubleClick += (s, e) => OnOpenRequested?.Invoke();
     }
+
 
     public void SetGuardState(bool isEnabled)
     {
