@@ -35,6 +35,7 @@ public static class Win32
     public const long WS_CHILD = 0x40000000L;
     public const long WS_POPUP = 0x80000000L;
     public const long WS_EX_TOOLWINDOW = 0x00000080L;
+    public const long WS_EX_TRANSPARENT = 0x00000020L;
     public const long WS_EX_NOACTIVATE = 0x08000000L;
 
     public const int DWMWA_EXTENDED_FRAME_BOUNDS = 9;

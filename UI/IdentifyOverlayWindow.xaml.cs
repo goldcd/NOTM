@@ -6,6 +6,7 @@ using System.Windows.Interop;
 using System.Windows.Media;
 using System.Windows.Media.Animation;
 using NOTM.Core.Display;
+using NOTM.Core.Native;
 
 namespace NOTM.UI;
 
@@ -30,9 +31,12 @@ public partial class IdentifyOverlayWindow : Window
     public Brush CardBorderBrush { get; set; } = new SolidColorBrush(System.Windows.Media.Color.FromArgb(120, 255, 255, 255));
     public Brush StatusBgBrush { get; set; } = new SolidColorBrush(System.Windows.Media.Color.FromRgb(59, 130, 246));
 
+    private readonly DisplayInfo _display;
+
     public IdentifyOverlayWindow(DisplayInfo display)
     {
         InitializeComponent();
+        _display = display;
 
         IndexNumber = display.Index.ToString();
         DisplayTitle = display.DisplayTitle;
@@ -62,7 +66,7 @@ public partial class IdentifyOverlayWindow : Window
 
         DataContext = this;
 
-        // Position window onto monitor
+        // Preliminary logical position
         Left = display.Left;
         Top = display.Top;
         Width = display.Width;
@@ -71,12 +75,31 @@ public partial class IdentifyOverlayWindow : Window
         Loaded += OnLoaded;
     }
 
+    protected override void OnSourceInitialized(EventArgs e)
+    {
+        base.OnSourceInitialized(e);
+
+        var hwnd = new WindowInteropHelper(this).Handle;
+        if (hwnd != IntPtr.Zero)
+        {
+            // Position precisely onto the physical monitor rectangle using Win32 SetWindowPos
+            Win32.SetWindowPos(
+                hwnd,
+                new IntPtr(-1), // HWND_TOPMOST
+                _display.Left,
+                _display.Top,
+                _display.Width,
+                _display.Height,
+                Win32.SWP_NOACTIVATE | Win32.SWP_SHOWWINDOW);
+
+            // Make window click-through so user can continue using the PC without interruption
+            long exStyle = (long)GetWindowLongPtr(hwnd, GWL_EXSTYLE);
+            SetWindowLongPtr(hwnd, GWL_EXSTYLE, (IntPtr)(exStyle | WS_EX_TRANSPARENT | WS_EX_TOOLWINDOW));
+        }
+    }
+
     private async void OnLoaded(object sender, RoutedEventArgs e)
     {
-        // Make window click-through so user can continue using the PC without interruption
-        var hwnd = new WindowInteropHelper(this).Handle;
-        long exStyle = (long)GetWindowLongPtr(hwnd, GWL_EXSTYLE);
-        SetWindowLongPtr(hwnd, GWL_EXSTYLE, (IntPtr)(exStyle | WS_EX_TRANSPARENT | WS_EX_TOOLWINDOW));
 
         // Display for 2.6 seconds, then fade out smoothly
         await Task.Delay(2600);

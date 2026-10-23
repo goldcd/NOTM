@@ -7,8 +7,8 @@
         mc:Ignorable="d"
         Title="NOTM - Not on That Monitor"
         Icon="pack://application:,,,/Assets/app.ico"
-        Height="680" Width="920"
-        MinHeight="580" MinWidth="820"
+        Height="760" Width="940"
+        MinHeight="660" MinWidth="840"
         WindowStartupLocation="CenterScreen"
         Background="#1C1C1F"
         Foreground="#EDEDED"
@@ -290,7 +290,7 @@
                 <!-- Interactive Display Topology Canvas -->
                 <ui:MonitorVisualMap x:Name="MonitorMap"
                                      Grid.Row="1"
-                                     MinHeight="220"
+                                     MinHeight="180"
                                      DisplaysSource="{Binding Displays}"
                                      SelectedDisplay="{Binding SelectedDisplay, Mode=TwoWay}"
                                      Margin="0,0,0,12"/>

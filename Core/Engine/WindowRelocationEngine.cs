@@ -223,16 +223,24 @@ public class WindowRelocationEngine : IDisposable
             return false;
         }
 
-        // Requirement 2: Protect NOTM itself! Only skip identify overlay windows, NOT the NOTM main window
+        // Protect NOTM itself: NEVER relocate Identify Display overlay windows
         if (processId == _currentProcessId)
         {
-            var cNameBuilder = new StringBuilder(256);
-            Win32.GetClassName(hWnd, cNameBuilder, 256);
-            if (cNameBuilder.ToString().Contains("IdentifyOverlay", StringComparison.OrdinalIgnoreCase))
+            var titleBuilder = new StringBuilder(256);
+            Win32.GetWindowText(hWnd, titleBuilder, 256);
+            string title = titleBuilder.ToString();
+            if (title.Equals("Identify Display", StringComparison.OrdinalIgnoreCase))
+            {
+                return false;
+            }
+
+            long exStyleFlag = (long)Win32.GetWindowLongPtr(hWnd, Win32.GWL_EXSTYLE);
+            if ((exStyleFlag & (Win32.WS_EX_TOOLWINDOW | Win32.WS_EX_TRANSPARENT)) != 0)
             {
                 return false;
             }
         }
+
 
         // Ignore desktop and shell windows
         if (hWnd == Win32.GetDesktopWindow() || hWnd == Win32.GetShellWindow())

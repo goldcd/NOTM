@@ -116,8 +116,8 @@ public partial class MonitorVisualMap : UserControl
 
         EmptyNotice.Visibility = Visibility.Collapsed;
 
-        double availableW = ActualWidth > 60 ? ActualWidth - 60 : 720;
-        double availableH = ActualHeight > 50 ? ActualHeight - 50 : 210;
+        double availableW = Math.Max(200, (ActualWidth > 0 ? ActualWidth : 750) - 40);
+        double availableH = Math.Max(120, (ActualHeight > 0 ? ActualHeight : 220) - 30);
 
         int minX = displays.Min(d => d.Left);
         int minY = displays.Min(d => d.Top);
@@ -127,22 +127,58 @@ public partial class MonitorVisualMap : UserControl
         int totalSpanX = Math.Max(1, maxX - minX);
         int totalSpanY = Math.Max(1, maxY - minY);
 
-        double scaleX = availableW / totalSpanX;
-        double scaleY = availableH / totalSpanY;
-        double scale = Math.Min(scaleX, scaleY);
+        // Base geometric scale
+        double scale = Math.Min(availableW / totalSpanX, availableH / totalSpanY);
 
-        double totalCanvasW = Math.Round(totalSpanX * scale);
-        double totalCanvasH = Math.Round(totalSpanY * scale);
+        // Minimum box dimensions for clean text layout
+        double minBoxW = 140.0;
+        double minBoxH = 88.0;
 
-        MapCanvas.Width = totalCanvasW;
-        MapCanvas.Height = totalCanvasH;
-
-        foreach (var d in displays)
+        // Calculate preliminary box positions and dimensions
+        var boxSpecs = displays.Select(d =>
         {
-            double x = Math.Round((d.Left - minX) * scale);
-            double y = Math.Round((d.Top - minY) * scale);
-            double w = Math.Round(Math.Max(150, d.Width * scale));
-            double h = Math.Round(Math.Max(95, d.Height * scale));
+            double x = (d.Left - minX) * scale;
+            double y = (d.Top - minY) * scale;
+            double w = Math.Max(minBoxW, d.Width * scale);
+            double h = Math.Max(minBoxH, d.Height * scale);
+            return (Display: d, X: x, Y: y, W: w, H: h);
+        }).ToList();
+
+        // Ensure furthest right and bottom edges strictly fit inside available canvas space without clipping
+        double currentMaxX = boxSpecs.Max(b => b.X + b.W);
+        double currentMaxY = boxSpecs.Max(b => b.Y + b.H);
+
+        if (currentMaxY > availableH || currentMaxX > availableW)
+        {
+            double adjustFactor = Math.Min(availableW / currentMaxX, availableH / currentMaxY);
+            scale *= adjustFactor;
+
+            double adjustedMinW = Math.Max(90.0, minBoxW * adjustFactor);
+            double adjustedMinH = Math.Max(60.0, minBoxH * adjustFactor);
+
+            boxSpecs = displays.Select(d =>
+            {
+                double x = (d.Left - minX) * scale;
+                double y = (d.Top - minY) * scale;
+                double w = Math.Max(adjustedMinW, d.Width * scale);
+                double h = Math.Max(adjustedMinH, d.Height * scale);
+                return (Display: d, X: x, Y: y, W: w, H: h);
+            }).ToList();
+        }
+
+        double finalCanvasW = Math.Round(boxSpecs.Max(b => b.X + b.W));
+        double finalCanvasH = Math.Round(boxSpecs.Max(b => b.Y + b.H));
+
+        MapCanvas.Width = finalCanvasW;
+        MapCanvas.Height = finalCanvasH;
+
+        foreach (var b in boxSpecs)
+        {
+            var d = b.Display;
+            double x = Math.Round(b.X);
+            double y = Math.Round(b.Y);
+            double w = Math.Round(b.W);
+            double h = Math.Round(b.H);
 
             bool isSelected = SelectedDisplay != null && (SelectedDisplay == d || SelectedDisplay.DeviceName == d.DeviceName);
 
