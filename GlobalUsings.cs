@@ -1,0 +1,13 @@
+global using Application = System.Windows.Application;
+global using Window = System.Windows.Window;
+global using MessageBox = System.Windows.MessageBox;
+global using Point = System.Windows.Point;
+global using Size = System.Windows.Size;
+global using Color = System.Windows.Media.Color;
+global using Brush = System.Windows.Media.Brush;
+global using SolidColorBrush = System.Windows.Media.SolidColorBrush;
+global using Brushes = System.Windows.Media.Brushes;
+global using UserControl = System.Windows.Controls.UserControl;
+global using CheckBox = System.Windows.Controls.CheckBox;
+global using Button = System.Windows.Controls.Button;
+global using Cursors = System.Windows.Input.Cursors;

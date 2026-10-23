@@ -1,0 +1,533 @@
+<Window x:Class="NOTM.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:ui="clr-namespace:NOTM.UI"
+        mc:Ignorable="d"
+        Title="NOTM - Monitor Guard"
+        Height="780" Width="980"
+        MinHeight="600" MinWidth="850"
+        WindowStartupLocation="CenterScreen"
+        Background="#121214"
+        Foreground="#EDEDED"
+        FontFamily="Segoe UI, Inter, Roboto, Arial">
+
+    <Window.Resources>
+        <!-- Modern ScrollBar Style -->
+        <Style TargetType="{x:Type ScrollBar}">
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="Width" Value="8"/>
+        </Style>
+
+        <!-- Accent Button Style -->
+        <Style x:Key="ActionButtonStyle" TargetType="Button">
+            <Setter Property="Background" Value="#27272A"/>
+            <Setter Property="Foreground" Value="#EDEDED"/>
+            <Setter Property="BorderBrush" Value="#3F3F46"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="Padding" Value="14,8"/>
+            <Setter Property="FontSize" Value="13"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="btnBorder"
+                                Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                CornerRadius="8"
+                                Padding="{TemplateBinding Padding}">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="btnBorder" Property="Background" Value="#3F3F46"/>
+                                <Setter TargetName="btnBorder" Property="BorderBrush" Value="#71717A"/>
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="btnBorder" Property="Background" Value="#27272A"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- Primary Action Button Style -->
+        <Style x:Key="PrimaryButtonStyle" TargetType="Button" BasedOn="{StaticResource ActionButtonStyle}">
+            <Setter Property="Background" Value="#2563EB"/>
+            <Setter Property="BorderBrush" Value="#3B82F6"/>
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="btnBorder"
+                                Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                CornerRadius="8"
+                                Padding="{TemplateBinding Padding}">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="btnBorder" Property="Background" Value="#1D4ED8"/>
+                                <Setter TargetName="btnBorder" Property="BorderBrush" Value="#60A5FA"/>
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="btnBorder" Property="Background" Value="#1E40AF"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- Danger Button Style -->
+        <Style x:Key="DangerButtonStyle" TargetType="Button" BasedOn="{StaticResource ActionButtonStyle}">
+            <Setter Property="Background" Value="#3B1214"/>
+            <Setter Property="BorderBrush" Value="#7F1D1D"/>
+            <Setter Property="Foreground" Value="#F87171"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="btnBorder"
+                                Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                CornerRadius="8"
+                                Padding="{TemplateBinding Padding}">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="btnBorder" Property="Background" Value="#991B1B"/>
+                                <Setter TargetName="btnBorder" Property="BorderBrush" Value="#EF4444"/>
+                                <Setter TargetName="btnBorder" Property="TextElement.Foreground" Value="White"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- Success Button Style -->
+        <Style x:Key="SuccessButtonStyle" TargetType="Button" BasedOn="{StaticResource ActionButtonStyle}">
+            <Setter Property="Background" Value="#064E3B"/>
+            <Setter Property="BorderBrush" Value="#047857"/>
+            <Setter Property="Foreground" Value="#34D399"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="btnBorder"
+                                Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                CornerRadius="8"
+                                Padding="{TemplateBinding Padding}">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="btnBorder" Property="Background" Value="#059669"/>
+                                <Setter TargetName="btnBorder" Property="BorderBrush" Value="#10B981"/>
+                                <Setter TargetName="btnBorder" Property="TextElement.Foreground" Value="White"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <BooleanToVisibilityConverter x:Key="BoolToVis"/>
+    </Window.Resources>
+
+    <Grid Margin="24">
+        <Grid.RowDefinitions>
+            <!-- Header -->
+            <RowDefinition Height="Auto"/>
+            <!-- Topology / Visual Map -->
+            <RowDefinition Height="Auto"/>
+            <!-- Content Area (Monitors + Logs) -->
+            <RowDefinition Height="*"/>
+            <!-- Footer / Settings -->
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <!-- ================= HEADER ================= -->
+        <Border Grid.Row="0" Margin="0,0,0,16" Padding="0,0,0,16" BorderBrush="#27272A" BorderThickness="0,0,0,1">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+
+                <!-- Left: App Brand & Status -->
+                <StackPanel Grid.Column="0">
+                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                        <!-- Logo / Icon -->
+                        <Border Width="36" Height="36" CornerRadius="10" Background="#2563EB" Margin="0,0,12,0">
+                            <TextBlock Text="🛡" FontSize="18" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <StackPanel VerticalAlignment="Center">
+                            <StackPanel Orientation="Horizontal">
+                                <TextBlock Text="NOTM" FontSize="22" FontWeight="Bold" Foreground="White" Margin="0,0,10,0"/>
+                                <!-- Status Badge -->
+                                <Border Background="{Binding StatusBrush, FallbackValue=#10B981}"
+                                        CornerRadius="12"
+                                        Padding="10,3"
+                                        VerticalAlignment="Center">
+                                    <StackPanel Orientation="Horizontal">
+                                        <Ellipse Width="7" Height="7" Fill="White" Margin="0,0,6,0"/>
+                                        <TextBlock Text="{Binding StatusText, FallbackValue='GUARD ACTIVE'}"
+                                                   FontSize="11"
+                                                   FontWeight="Bold"
+                                                   Foreground="White"/>
+                                    </StackPanel>
+                                </Border>
+                            </StackPanel>
+                            <TextBlock Text="Monitor Usage Restrictor • Keeps windows away from off-limits displays"
+                                       FontSize="12" Foreground="#A1A1AA" Margin="0,2,0,0"/>
+                        </StackPanel>
+                    </StackPanel>
+                </StackPanel>
+
+                <!-- Right: Action Buttons -->
+                <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                    <Button Content="👁 Identify Displays"
+                            Style="{StaticResource PrimaryButtonStyle}"
+                            Click="OnIdentifyAllClicked"
+                            Margin="0,0,8,0"
+                            ToolTip="Show identification numbers on all connected monitors"/>
+
+                    <Button Content="⚡ Relocate Windows"
+                            Style="{StaticResource ActionButtonStyle}"
+                            Click="OnSweepClicked"
+                            Margin="0,0,8,0"
+                            ToolTip="Immediately move any window currently on an off-limits monitor"/>
+
+                    <Button Content="🔄 Refresh"
+                            Style="{StaticResource ActionButtonStyle}"
+                            Click="OnRefreshClicked"
+                            Margin="0,0,12,0"
+                            ToolTip="Scan for connected display changes"/>
+
+                    <!-- Guard Master Toggle -->
+                    <Border Background="#27272A" CornerRadius="8" Padding="12,6" BorderBrush="#3F3F46" BorderThickness="1">
+                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                            <TextBlock Text="Guard Status:" FontSize="13" Foreground="#A1A1AA" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                            <CheckBox IsChecked="{Binding IsGuardActive}"
+                                      VerticalAlignment="Center"
+                                      Cursor="Hand"/>
+                        </StackPanel>
+                    </Border>
+                </StackPanel>
+            </Grid>
+        </Border>
+
+        <!-- ================= DISPLAY TOPOLOGY VISUAL MAP ================= -->
+        <Grid Grid.Row="1" Margin="0,0,0,20">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+            </Grid.RowDefinitions>
+
+            <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
+                <TextBlock Text="Display Topology" FontSize="15" FontWeight="SemiBold" Foreground="White" Margin="0,0,8,0"/>
+                <TextBlock Text="• Scaled physical monitor layout (click a screen to toggle)" FontSize="12" Foreground="#71717A" VerticalAlignment="Center"/>
+            </StackPanel>
+
+            <ui:MonitorVisualMap x:Name="MonitorMap"
+                                 Grid.Row="1"
+                                 Height="130"
+                                 DisplaysSource="{Binding Displays}"
+                                 MonitorClicked="OnMapMonitorClicked"/>
+        </Grid>
+
+        <!-- ================= MAIN SPLIT CONTENT ================= -->
+        <Grid Grid.Row="2" Margin="0,0,0,16">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="1.15*"/>
+                <ColumnDefinition Width="16"/>
+                <ColumnDefinition Width="0.85*"/>
+            </Grid.ColumnDefinitions>
+
+            <!-- LEFT: DETECTED MONITORS LIST -->
+            <Border Grid.Column="0"
+                    Background="#18181B"
+                    BorderBrush="#27272A"
+                    BorderThickness="1"
+                    CornerRadius="14"
+                    Padding="16">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
+
+                    <Grid Grid.Row="0" Margin="0,0,0,12">
+                        <TextBlock Text="Connected Displays" FontSize="15" FontWeight="SemiBold" Foreground="White"/>
+                        <TextBlock Text="{Binding Displays.Count, StringFormat='{}{0} Detected'}"
+                                   HorizontalAlignment="Right"
+                                   FontSize="12"
+                                   Foreground="#A1A1AA"/>
+                    </Grid>
+
+                    <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
+                        <ItemsControl ItemsSource="{Binding Displays}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <Border Background="#27272A"
+                                            BorderBrush="{Binding StatusBadgeBackground}"
+                                            BorderThickness="1.5"
+                                            CornerRadius="10"
+                                            Padding="14"
+                                            Margin="0,0,0,10">
+                                        <Grid>
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="Auto"/>
+                                                <ColumnDefinition Width="*"/>
+                                                <ColumnDefinition Width="Auto"/>
+                                            </Grid.ColumnDefinitions>
+
+                                            <!-- Monitor Number Badge -->
+                                            <Border Grid.Column="0"
+                                                    Width="36" Height="36"
+                                                    CornerRadius="18"
+                                                    Background="{Binding StatusBadgeBackground}"
+                                                    Margin="0,0,12,0"
+                                                    VerticalAlignment="Center">
+                                                <TextBlock Text="{Binding Index}"
+                                                           FontWeight="Bold"
+                                                           FontSize="16"
+                                                           Foreground="White"
+                                                           HorizontalAlignment="Center"
+                                                           VerticalAlignment="Center"/>
+                                            </Border>
+
+                                            <!-- Monitor Info -->
+                                            <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                                <StackPanel Orientation="Horizontal">
+                                                    <TextBlock Text="{Binding DisplayTitle}"
+                                                               FontSize="15"
+                                                               FontWeight="Bold"
+                                                               Foreground="White"
+                                                               Margin="0,0,8,0"/>
+                                                    <!-- Status Badge -->
+                                                    <Border Background="{Binding StatusBadgeBackground}"
+                                                            CornerRadius="6"
+                                                            Padding="6,2"
+                                                            VerticalAlignment="Center">
+                                                        <TextBlock Text="{Binding StatusDescription}"
+                                                                   FontSize="10"
+                                                                   FontWeight="Bold"
+                                                                   Foreground="White"/>
+                                                    </Border>
+                                                </StackPanel>
+
+                                                <TextBlock Text="{Binding Subtitle}"
+                                                           FontSize="12"
+                                                           Foreground="#A1A1AA"
+                                                           Margin="0,2,0,0"/>
+
+                                                <TextBlock Text="{Binding PositionString}"
+                                                           FontSize="11"
+                                                           Foreground="#71717A"/>
+                                            </StackPanel>
+
+                                            <!-- Controls -->
+                                            <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
+                                                <!-- Make Primary Button -->
+                                                <Button Content="Set Primary"
+                                                        Style="{StaticResource ActionButtonStyle}"
+                                                        Padding="10,6"
+                                                        Margin="0,0,6,0"
+                                                        FontSize="12"
+                                                        Click="OnSetPrimaryClicked"
+                                                        Tag="{Binding}"
+                                                        ToolTip="Make this the safe target monitor for all off-limits apps"/>
+
+                                                <!-- Block / Allow Toggle -->
+                                                <Button Content="{Binding IsExcluded, Converter={x:Static ui:BlockButtonTextConverter.Instance}}"
+                                                        Style="{Binding IsExcluded, Converter={x:Static ui:BlockButtonStyleConverter.Instance}}"
+                                                        Padding="10,6"
+                                                        Margin="0,0,6,0"
+                                                        FontSize="12"
+                                                        Click="OnToggleBlockClicked"
+                                                        Tag="{Binding}"
+                                                        ToolTip="Toggle whether windows are forbidden on this monitor"/>
+
+                                                <!-- Identify Button -->
+                                                <Button Content="👁"
+                                                        Style="{StaticResource ActionButtonStyle}"
+                                                        Padding="8,6"
+                                                        FontSize="12"
+                                                        Click="OnIdentifySingleClicked"
+                                                        Tag="{Binding}"
+                                                        ToolTip="Identify this monitor"/>
+                                            </StackPanel>
+                                        </Grid>
+                                    </Border>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </ScrollViewer>
+                </Grid>
+            </Border>
+
+            <!-- RIGHT: LIVE ACTIVITY LOG -->
+            <Border Grid.Column="2"
+                    Background="#18181B"
+                    BorderBrush="#27272A"
+                    BorderThickness="1"
+                    CornerRadius="14"
+                    Padding="16">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
+
+                    <Grid Grid.Row="0" Margin="0,0,0,8">
+                        <TextBlock Text="Window Relocation Feed" FontSize="15" FontWeight="SemiBold" Foreground="White"/>
+                        <Button Content="Clear"
+                                Style="{StaticResource ActionButtonStyle}"
+                                Padding="8,3"
+                                FontSize="11"
+                                HorizontalAlignment="Right"
+                                Click="OnClearLogClicked"/>
+                    </Grid>
+
+                    <!-- Stats Chips -->
+                    <UniformGrid Grid.Row="1" Columns="3" Margin="0,0,0,12">
+                        <Border Background="#27272A" CornerRadius="8" Padding="8,6" Margin="0,0,4,0">
+                            <StackPanel HorizontalAlignment="Center">
+                                <TextBlock Text="{Binding RelocatedCount, FallbackValue=0}" FontSize="16" FontWeight="Bold" Foreground="#3B82F6" HorizontalAlignment="Center"/>
+                                <TextBlock Text="Redirects" FontSize="10" Foreground="#A1A1AA" HorizontalAlignment="Center"/>
+                            </StackPanel>
+                        </Border>
+                        <Border Background="#27272A" CornerRadius="8" Padding="8,6" Margin="2,0,2,0">
+                            <StackPanel HorizontalAlignment="Center">
+                                <TextBlock Text="{Binding BlockedCount, FallbackValue=0}" FontSize="16" FontWeight="Bold" Foreground="#EF4444" HorizontalAlignment="Center"/>
+                                <TextBlock Text="Blocked" FontSize="10" Foreground="#A1A1AA" HorizontalAlignment="Center"/>
+                            </StackPanel>
+                        </Border>
+                        <Border Background="#27272A" CornerRadius="8" Padding="8,6" Margin="4,0,0,0">
+                            <StackPanel HorizontalAlignment="Center">
+                                <TextBlock Text="{Binding AllowedCount, FallbackValue=0}" FontSize="16" FontWeight="Bold" Foreground="#10B981" HorizontalAlignment="Center"/>
+                                <TextBlock Text="Allowed" FontSize="10" Foreground="#A1A1AA" HorizontalAlignment="Center"/>
+                            </StackPanel>
+                        </Border>
+                    </UniformGrid>
+
+                    <!-- Activity Log List -->
+                    <ScrollViewer Grid.Row="2" VerticalScrollBarVisibility="Auto">
+                        <StackPanel>
+                            <TextBlock Text="No windows relocated yet. When an app enters a blocked monitor, it will automatically appear here."
+                                       Foreground="#71717A"
+                                       FontSize="12"
+                                       TextWrapping="Wrap"
+                                       HorizontalAlignment="Center"
+                                       Margin="0,30,0,0"
+                                       Visibility="{Binding RelocationLog.Count, Converter={x:Static ui:ZeroCountToVisibilityConverter.Instance}}"/>
+
+                            <ItemsControl ItemsSource="{Binding RelocationLog}">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <Border Background="#202024"
+                                                BorderBrush="#2E2E33"
+                                                BorderThickness="1"
+                                                CornerRadius="8"
+                                                Padding="10,8"
+                                                Margin="0,0,0,6">
+                                            <Grid>
+                                                <Grid.RowDefinitions>
+                                                    <RowDefinition Height="Auto"/>
+                                                    <RowDefinition Height="Auto"/>
+                                                </Grid.RowDefinitions>
+
+                                                <!-- Top: Process & Time -->
+                                                <Grid Grid.Row="0">
+                                                    <StackPanel Orientation="Horizontal">
+                                                        <Border Background="#1D4ED8" CornerRadius="4" Padding="6,2" Margin="0,0,6,0">
+                                                            <TextBlock Text="{Binding ProcessName}" FontSize="11" FontWeight="Bold" Foreground="White"/>
+                                                        </Border>
+                                                        <TextBlock Text="{Binding WindowTitle}"
+                                                                   FontSize="12"
+                                                                   FontWeight="SemiBold"
+                                                                   Foreground="#E4E4E7"
+                                                                   TextTrimming="CharacterEllipsis"
+                                                                   MaxWidth="160"
+                                                                   VerticalAlignment="Center"/>
+                                                    </StackPanel>
+                                                    <TextBlock Text="{Binding TimeFormatted}"
+                                                               HorizontalAlignment="Right"
+                                                               FontSize="11"
+                                                               Foreground="#71717A"
+                                                               VerticalAlignment="Center"/>
+                                                </Grid>
+
+                                                <!-- Bottom: Source to Target -->
+                                                <TextBlock Grid.Row="1"
+                                                           FontSize="11"
+                                                           Foreground="#A1A1AA"
+                                                           Margin="0,4,0,0">
+                                                    <Run Text="{Binding SourceMonitor}" Foreground="#F87171" FontWeight="SemiBold"/>
+                                                    <Run Text=" ➔ " Foreground="#71717A"/>
+                                                    <Run Text="{Binding TargetMonitor}" Foreground="#34D399" FontWeight="SemiBold"/>
+                                                </TextBlock>
+                                            </Grid>
+                                        </Border>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </StackPanel>
+                    </ScrollViewer>
+                </Grid>
+            </Border>
+        </Grid>
+
+        <!-- ================= FOOTER / SETTINGS ================= -->
+        <Border Grid.Row="3" Background="#18181B" BorderBrush="#27272A" BorderThickness="1" CornerRadius="12" Padding="16,10">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+
+                <!-- Options -->
+                <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
+                    <CheckBox Content="Start with Windows"
+                              IsChecked="{Binding StartWithWindows}"
+                              Foreground="#D4D4D8"
+                              FontSize="12"
+                              Margin="0,0,20,0"
+                              Cursor="Hand"/>
+
+                    <CheckBox Content="Start Minimized to Tray"
+                              IsChecked="{Binding StartMinimized}"
+                              Foreground="#D4D4D8"
+                              FontSize="12"
+                              Margin="0,0,20,0"
+                              Cursor="Hand"/>
+
+                    <CheckBox Content="Show Notification on Relocate"
+                              IsChecked="{Binding ShowNotifications}"
+                              Foreground="#D4D4D8"
+                              FontSize="12"
+                              Cursor="Hand"/>
+                </StackPanel>
+
+                <!-- Notice -->
+                <TextBlock Grid.Column="1"
+                           Text="Closing this window minimizes to the System Tray."
+                           FontSize="11"
+                           Foreground="#71717A"
+                           VerticalAlignment="Center"/>
+            </Grid>
+        </Border>
+    </Grid>
+</Window>
