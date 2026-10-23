@@ -2,6 +2,8 @@
 
 A lightweight Windows system tray utility that keeps secondary HDMI audio devices (such as soundbars or AV receivers) active for sound while strictly preventing any applications from appearing on them.
 
+![NOTM Screenshot](Assets/screenshot.png)
+
 ---
 
 ## 1. What It Does and Why
@@ -131,7 +133,8 @@ NOTM/
 │   └── IdentifyOverlayWindow.xaml    # Click-through screen identification overlays
 ├── Assets/
 │   ├── app.ico                       # Multi-resolution application icon
-│   └── generate_icon.ps1             # Icon generator script
+│   ├── generate_icon.ps1             # Icon generator script
+│   └── screenshot.png                # Application UI screenshot
 ├── NOTM.sln                          # Visual Studio Solution
 ├── NOTM.csproj                       # Project configuration (.NET 8 Windows)
 ├── install.cmd / install.ps1         # User-level installer
